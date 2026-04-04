@@ -7,7 +7,10 @@ import { Defenses } from './components/Defenses';
 import { Fleet } from './components/Fleet';
 import { Galaxy } from './components/Galaxy';
 import { Messages } from './components/Messages';
+import { Auth } from './components/Auth';
 import { useResourceTick } from './hooks/useResourceTick';
+import { useAuth } from './hooks/useAuth';
+import { useSync } from './hooks/useSync';
 import { useGameStore } from './store/gameStore';
 import './App.css';
 
@@ -45,38 +48,66 @@ function PlanetSwitcher() {
   );
 }
 
-function App() {
+function GameApp({ username, onLogout }: { username: string; onLogout: () => void }) {
   useResourceTick();
+  useSync();
+
+  return (
+    <div className="game-layout">
+      <nav className="game-nav">
+        <div className="game-title">OGame2D</div>
+        <PlanetSwitcher />
+        <ul>
+          {NAV_ITEMS.map(({ path, label }) => (
+            <li key={path}>
+              <NavLink to={path} end={path === '/'}>
+                {label}
+              </NavLink>
+            </li>
+          ))}
+        </ul>
+        <div className="nav-user">
+          <span className="nav-username">{username}</span>
+          <button className="nav-logout" onClick={onLogout}>Deconnexion</button>
+        </div>
+      </nav>
+      <main className="game-content">
+        <Routes>
+          <Route path="/" element={<Overview />} />
+          <Route path="/buildings" element={<Buildings />} />
+          <Route path="/research" element={<Research />} />
+          <Route path="/shipyard" element={<Shipyard />} />
+          <Route path="/defenses" element={<Defenses />} />
+          <Route path="/fleet" element={<Fleet />} />
+          <Route path="/galaxy" element={<Galaxy />} />
+          <Route path="/messages" element={<Messages />} />
+        </Routes>
+      </main>
+    </div>
+  );
+}
+
+function App() {
+  const { user, loading, error, login, register, logout } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="auth-page">
+        <div className="auth-card">
+          <h1 className="auth-title">OGame2D</h1>
+          <p className="auth-subtitle">Chargement...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Auth onLogin={login} onRegister={register} error={error} loading={loading} />;
+  }
 
   return (
     <BrowserRouter>
-      <div className="game-layout">
-        <nav className="game-nav">
-          <div className="game-title">OGame2D</div>
-          <PlanetSwitcher />
-          <ul>
-            {NAV_ITEMS.map(({ path, label }) => (
-              <li key={path}>
-                <NavLink to={path} end={path === '/'}>
-                  {label}
-                </NavLink>
-              </li>
-            ))}
-          </ul>
-        </nav>
-        <main className="game-content">
-          <Routes>
-            <Route path="/" element={<Overview />} />
-            <Route path="/buildings" element={<Buildings />} />
-            <Route path="/research" element={<Research />} />
-            <Route path="/shipyard" element={<Shipyard />} />
-            <Route path="/defenses" element={<Defenses />} />
-            <Route path="/fleet" element={<Fleet />} />
-            <Route path="/galaxy" element={<Galaxy />} />
-            <Route path="/messages" element={<Messages />} />
-          </Routes>
-        </main>
-      </div>
+      <GameApp username={user.username} onLogout={logout} />
     </BrowserRouter>
   );
 }
