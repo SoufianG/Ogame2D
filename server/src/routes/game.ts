@@ -98,10 +98,20 @@ router.get('/galaxy/:galaxy/:system', (req: AuthRequest, res) => {
   const db = getDb();
   const { galaxy, system } = req.params;
 
+  const INACTIVE_DAYS = 7;
+  const VACATION_DAYS = 3;
+
   const planets = db.prepare(`
     SELECT p.position, p.name, p.size, p.temperature, p.biome,
            u.username as player_name, p.user_id,
-           (SELECT 1 FROM moons WHERE planet_id = p.id) as has_moon
+           u.last_login,
+           (SELECT 1 FROM moons WHERE planet_id = p.id) as has_moon,
+           CASE
+             WHEN u.last_login IS NULL THEN 'inactive'
+             WHEN (unixepoch() - u.last_login) > ${INACTIVE_DAYS * 86400} THEN 'inactive'
+             WHEN (unixepoch() - u.last_login) > ${VACATION_DAYS * 86400} THEN 'vacation'
+             ELSE 'active'
+           END as status
     FROM planets p
     JOIN users u ON u.id = p.user_id
     WHERE p.galaxy = ? AND p.system = ?

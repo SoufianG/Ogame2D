@@ -104,9 +104,61 @@ CREATE TABLE IF NOT EXISTS messages (
   created_at INTEGER NOT NULL DEFAULT (unixepoch())
 );
 
+-- Alliances
+CREATE TABLE IF NOT EXISTS alliances (
+  id TEXT PRIMARY KEY,
+  tag TEXT UNIQUE NOT NULL,        -- tag court (3-8 chars)
+  name TEXT UNIQUE NOT NULL,
+  description TEXT DEFAULT '',
+  leader_id TEXT NOT NULL REFERENCES users(id),
+  created_at INTEGER NOT NULL DEFAULT (unixepoch())
+);
+
+-- Membres d'alliance
+CREATE TABLE IF NOT EXISTS alliance_members (
+  user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  alliance_id TEXT NOT NULL REFERENCES alliances(id) ON DELETE CASCADE,
+  rank TEXT NOT NULL DEFAULT 'member',  -- leader, officer, member
+  joined_at INTEGER NOT NULL DEFAULT (unixepoch())
+);
+
+-- Diplomatie entre alliances
+CREATE TABLE IF NOT EXISTS alliance_diplomacy (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  alliance_id TEXT NOT NULL REFERENCES alliances(id) ON DELETE CASCADE,
+  target_alliance_id TEXT NOT NULL REFERENCES alliances(id) ON DELETE CASCADE,
+  relation TEXT NOT NULL,  -- war, peace, nap (non-aggression pact)
+  created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+  UNIQUE(alliance_id, target_alliance_id)
+);
+
+-- Messages prives entre joueurs
+CREATE TABLE IF NOT EXISTS private_messages (
+  id TEXT PRIMARY KEY,
+  from_user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  to_user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  subject TEXT NOT NULL,
+  body TEXT NOT NULL,
+  is_read INTEGER NOT NULL DEFAULT 0,
+  created_at INTEGER NOT NULL DEFAULT (unixepoch())
+);
+
+-- Classements (cache, recalcule periodiquement)
+CREATE TABLE IF NOT EXISTS rankings (
+  user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  total_points INTEGER NOT NULL DEFAULT 0,
+  economy_points INTEGER NOT NULL DEFAULT 0,
+  research_points INTEGER NOT NULL DEFAULT 0,
+  military_points INTEGER NOT NULL DEFAULT 0,
+  updated_at INTEGER NOT NULL DEFAULT (unixepoch())
+);
+
 -- Index
 CREATE INDEX IF NOT EXISTS idx_planets_user ON planets(user_id);
 CREATE INDEX IF NOT EXISTS idx_planets_coords ON planets(galaxy, system, position);
 CREATE INDEX IF NOT EXISTS idx_fleet_user ON fleet_movements(user_id);
 CREATE INDEX IF NOT EXISTS idx_fleet_arrival ON fleet_movements(arrival_time);
 CREATE INDEX IF NOT EXISTS idx_messages_user ON messages(user_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_alliance_members ON alliance_members(alliance_id);
+CREATE INDEX IF NOT EXISTS idx_private_messages_to ON private_messages(to_user_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_rankings_total ON rankings(total_points DESC);

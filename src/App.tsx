@@ -8,6 +8,9 @@ import { Fleet } from './components/Fleet';
 import { Galaxy } from './components/Galaxy';
 import { Messages } from './components/Messages';
 import { Auth } from './components/Auth';
+import { Alliance } from './components/Alliance';
+import { Social } from './components/Social';
+import { Rankings } from './components/Rankings';
 import { useResourceTick } from './hooks/useResourceTick';
 import { useAuth } from './hooks/useAuth';
 import { useSync } from './hooks/useSync';
@@ -23,6 +26,9 @@ const NAV_ITEMS = [
   { path: '/fleet', label: 'Flotte' },
   { path: '/galaxy', label: 'Galaxie' },
   { path: '/messages', label: 'Messages' },
+  { path: '/alliance', label: 'Alliance' },
+  { path: '/social', label: 'Courrier' },
+  { path: '/rankings', label: 'Classement' },
 ];
 
 function PlanetSwitcher() {
@@ -81,6 +87,9 @@ function GameApp({ username, onLogout }: { username: string; onLogout: () => voi
           <Route path="/fleet" element={<Fleet />} />
           <Route path="/galaxy" element={<Galaxy />} />
           <Route path="/messages" element={<Messages />} />
+          <Route path="/alliance" element={<Alliance />} />
+          <Route path="/social" element={<Social />} />
+          <Route path="/rankings" element={<Rankings />} />
         </Routes>
       </main>
     </div>

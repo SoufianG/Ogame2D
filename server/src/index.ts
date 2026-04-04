@@ -5,6 +5,9 @@ import { migrateDb, closeDb } from './db/database.js';
 import authRoutes from './routes/auth.js';
 import planetRoutes from './routes/planets.js';
 import gameRoutes from './routes/game.js';
+import allianceRoutes from './routes/alliance.js';
+import socialRoutes from './routes/social.js';
+import rankingRoutes from './routes/rankings.js';
 
 const PORT = parseInt(process.env.PORT || '3001');
 const CORS_ORIGIN = process.env.CORS_ORIGIN || 'http://localhost:5173';
@@ -28,6 +31,9 @@ app.get('/api/health', (_req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/planets', planetRoutes);
 app.use('/api/game', gameRoutes);
+app.use('/api/alliance', allianceRoutes);
+app.use('/api/social', socialRoutes);
+app.use('/api/rankings', rankingRoutes);
 
 // Start
 const server = app.listen(PORT, '0.0.0.0', () => {

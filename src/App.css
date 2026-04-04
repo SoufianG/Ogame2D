@@ -1303,3 +1303,36 @@
 .auth-switch:hover {
   color: rgba(255, 255, 255, 0.6);
 }
+
+/* === Social textarea === */
+.social-textarea {
+  width: 100%;
+  padding: 0.65rem 0.85rem;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.6rem;
+  color: #fff;
+  font-size: 0.85rem;
+  font-family: inherit;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.social-textarea:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+/* === Rankings === */
+.ranking-table {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 1rem;
+  padding: 0.75rem;
+  overflow-x: auto;
+}
+
+.rank-number {
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.6);
+}
