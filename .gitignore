@@ -1,0 +1,48 @@
+# Dependencies
+node_modules/
+*/node_modules/
+
+# Build
+dist/
+dist-ssr/
+build/
+*.tsbuildinfo
+*.local
+
+# Environment
+.env
+.env.local
+.env.production
+
+# IDE
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+docker-compose.override.yml
+
+# SQLite DB (dev)
+*.db
+*.db-journal
+*.db-wal
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Coverage
+coverage/

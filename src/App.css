@@ -1,0 +1,1151 @@
+/* === Game Layout === */
+.game-layout {
+  display: flex;
+  min-height: 100vh;
+  color: #e2e8f0;
+}
+
+/* === Navigation === */
+.game-nav {
+  width: 200px;
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 1.5rem 0;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+.game-title {
+  font-size: 1.3rem;
+  font-weight: 700;
+  text-align: center;
+  padding: 0.5rem 1rem 2rem;
+  color: #fff;
+  letter-spacing: 1px;
+}
+
+/* === Planet Switcher === */
+.planet-switcher {
+  padding: 0 1rem 1rem;
+}
+
+.planet-switcher select {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.5rem;
+  padding: 0.4rem 0.5rem;
+  color: #fff;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.planet-switcher select:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.planet-switcher select option {
+  background: #1e1b4b;
+  color: #fff;
+}
+
+.game-nav ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.game-nav li a {
+  display: block;
+  padding: 0.7rem 1.5rem;
+  color: rgba(255, 255, 255, 0.45);
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  border-left: 3px solid transparent;
+}
+
+.game-nav li a:hover {
+  color: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.game-nav li a.active {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+  border-left-color: rgba(255, 255, 255, 0.6);
+}
+
+/* === Content === */
+.game-content {
+  flex: 1;
+  padding: 2rem;
+  overflow-y: auto;
+}
+
+/* === Glass Card (composant reutilisable) === */
+.glass-card {
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1.25rem;
+  padding: 1.25rem;
+}
+
+/* === Resources Bar === */
+.resources-bar {
+  display: flex;
+  gap: 1rem;
+  padding: 1rem 1.5rem;
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.resource-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.resource-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 0.625rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+
+.resource-icon.metal { background: rgba(148, 163, 184, 0.2); }
+.resource-icon.crystal { background: rgba(96, 165, 250, 0.2); }
+.resource-icon.deuterium { background: rgba(45, 212, 191, 0.2); }
+.resource-icon.energy { background: rgba(250, 204, 21, 0.2); }
+
+.resource-data {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.resource-label {
+  color: rgba(255, 255, 255, 0.4);
+  font-weight: 500;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.resource-value {
+  color: #fff;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.95rem;
+}
+
+.resource-sub {
+  color: rgba(255, 255, 255, 0.25);
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.positive {
+  color: #4ade80;
+}
+
+.negative {
+  color: #f87171;
+}
+
+/* === Overview === */
+.overview {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.planet-section {
+  display: flex;
+  align-items: flex-start;
+  gap: 2.5rem;
+  margin-top: 0.5rem;
+}
+
+.planet-details {
+  flex: 1;
+}
+
+.planet-name {
+  margin: 0 0 1.2rem;
+  font-size: 1.6rem;
+  color: #fff;
+  font-weight: 700;
+}
+
+.planet-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0.9rem;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  max-width: 320px;
+}
+
+.stat-label {
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 0.85rem;
+}
+
+.stat-value {
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+/* === Pages placeholder === */
+.page {
+  padding: 1rem 0;
+}
+
+.page h2 {
+  color: #fff;
+  margin: 0 0 0.5rem;
+}
+
+.page p {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+/* === Buildings / Research Pages === */
+.buildings-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.page-header h2 {
+  color: #fff;
+  margin: 0;
+  font-size: 1.4rem;
+}
+
+.slots-info {
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 0.85rem;
+}
+
+.building-category {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.category-title {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin: 0;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.building-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 0.75rem;
+}
+
+.building-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 1rem;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  transition: border-color 0.2s;
+}
+
+.building-card:hover {
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.building-card.locked {
+  opacity: 0.5;
+}
+
+.building-card.building {
+  border-color: rgba(96, 165, 250, 0.3);
+  background: rgba(96, 165, 250, 0.06);
+}
+
+.building-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.building-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.building-title h3 {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #fff;
+  font-weight: 600;
+}
+
+.building-level {
+  color: rgba(255, 255, 255, 0.35);
+  font-size: 0.8rem;
+  background: rgba(255, 255, 255, 0.06);
+  padding: 0.15rem 0.5rem;
+  border-radius: 0.4rem;
+}
+
+.building-desc {
+  color: rgba(255, 255, 255, 0.35);
+  font-size: 0.8rem;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.building-cost {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.building-cost .insufficient {
+  color: #f87171;
+}
+
+.build-time {
+  color: rgba(255, 255, 255, 0.3);
+  margin-left: auto;
+}
+
+.building-prereqs {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.prereq-missing {
+  color: #f87171;
+  font-size: 0.75rem;
+}
+
+.building-timer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.timer-bar {
+  height: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.timer-fill {
+  height: 100%;
+  background: #60a5fa;
+  border-radius: 2px;
+  transition: width 1s linear;
+}
+
+.timer-text {
+  font-size: 0.75rem;
+  color: #60a5fa;
+}
+
+.build-btn {
+  margin-top: 0.25rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.6rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.build-btn.ready {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.build-btn.ready:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.build-btn.cancel {
+  background: rgba(239, 68, 68, 0.1);
+  color: #f87171;
+  border-color: rgba(239, 68, 68, 0.2);
+}
+
+.build-btn.cancel:hover {
+  background: rgba(239, 68, 68, 0.18);
+}
+
+.build-btn.disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* === Shipyard / Defenses Pages === */
+.shipyard-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.unit-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 1rem;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.unit-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.unit-title h3 {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #fff;
+  font-weight: 600;
+}
+
+.unit-count {
+  color: rgba(255, 255, 255, 0.35);
+  font-size: 0.85rem;
+}
+
+.unit-stats {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.quantity-input {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.quantity-input input {
+  width: 80px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.4rem;
+  padding: 0.35rem 0.5rem;
+  color: #fff;
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.quantity-input input:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.shipyard-queue {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 0.75rem;
+  padding: 0.75rem 1rem;
+}
+
+.shipyard-queue h3 {
+  margin: 0 0 0.5rem;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.queue-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.3rem 0;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* === Galaxy Page === */
+.galaxy-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  height: calc(100vh - 4rem);
+}
+
+.system-nav {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1rem;
+}
+
+.system-nav-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  font-size: 1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+
+.system-nav-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.system-nav-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.system-label {
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 0.85rem;
+}
+
+.system-selector {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.system-selector input {
+  width: 60px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.4rem;
+  padding: 0.3rem 0.4rem;
+  color: #fff;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.system-selector input:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.system-total {
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 0.85rem;
+}
+
+.system-home-btn {
+  margin-left: auto;
+  padding: 0.4rem 0.8rem;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.system-home-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+/* === Solar System View === */
+.solar-system-view {
+  flex: 1;
+  position: relative;
+  background: rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 1.25rem;
+  overflow: hidden;
+  min-height: 400px;
+}
+
+.solar-system-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.orbit-toggle {
+  position: absolute;
+  bottom: 0.75rem;
+  right: 0.75rem;
+  width: 32px;
+  height: 32px;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.75rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+  z-index: 5;
+}
+
+.orbit-toggle:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+/* Tooltip */
+.system-tooltip {
+  position: absolute;
+  min-width: 180px;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 1rem;
+  padding: 0.85rem;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.tooltip-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.tooltip-name {
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.tooltip-owner {
+  font-size: 0.7rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 0.3rem;
+}
+
+.tooltip-owner.self {
+  background: rgba(52, 211, 153, 0.15);
+  color: #34d399;
+}
+
+.tooltip-owner.enemy {
+  background: rgba(248, 113, 113, 0.15);
+  color: #f87171;
+}
+
+.tooltip-stats {
+  display: flex;
+  gap: 0.75rem;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.tooltip-indicators {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.indicator {
+  font-size: 0.65rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 0.3rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.indicator.moon {
+  background: rgba(148, 163, 184, 0.15);
+  color: #94a3b8;
+}
+
+.indicator.debris {
+  background: rgba(251, 191, 36, 0.15);
+  color: #fbbf24;
+}
+
+.indicator.free {
+  background: rgba(52, 211, 153, 0.15);
+  color: #34d399;
+}
+
+.tooltip-actions {
+  display: flex;
+  gap: 0.4rem;
+  margin-top: 0.2rem;
+}
+
+.tooltip-btn {
+  flex: 1;
+  padding: 0.4rem 0.5rem;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.tooltip-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.tooltip-btn.attack {
+  border-color: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+}
+
+.tooltip-btn.attack:hover {
+  background: rgba(239, 68, 68, 0.12);
+}
+
+/* Legende */
+.system-legend {
+  display: flex;
+  gap: 1.25rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.legend-dot.player {
+  border: 1.5px dashed rgba(255, 255, 255, 0.5);
+  background: transparent;
+}
+
+.legend-dot.npc {
+  background: #f87171;
+}
+
+.legend-dot.free {
+  background: #34d399;
+}
+
+.legend-dot.moon {
+  background: #94a3b8;
+}
+
+.legend-dot.debris {
+  background: #a0a0a0;
+}
+
+/* === Fleet Page === */
+.fleet-movements {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.fleet-route {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.4);
+  margin-left: 0.5rem;
+}
+
+.fleet-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.fleet-summary {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.fleet-destination {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-end;
+}
+
+.fleet-destination label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.fleet-destination input {
+  width: 70px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.4rem;
+  padding: 0.4rem 0.5rem;
+  color: #fff;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.fleet-destination input:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.fleet-speed {
+  margin-top: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.fleet-speed label {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.fleet-speed input[type="range"] {
+  width: 100%;
+  accent-color: rgba(255, 255, 255, 0.5);
+}
+
+.fleet-missions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.mission-btn {
+  padding: 0.5rem 1rem;
+  border-radius: 0.6rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.mission-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.mission-btn.active {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+
+.mission-btn.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.fleet-confirm p {
+  margin: 0.3rem 0;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.fleet-ship-list {
+  list-style: none;
+  padding: 0;
+  margin: 0.3rem 0;
+}
+
+.fleet-ship-list li {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.5);
+  padding: 0.15rem 0;
+}
+
+/* === Messages Page === */
+.message-filters {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.message-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.message-item {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 0.75rem;
+  overflow: hidden;
+  transition: all 0.15s;
+}
+
+.message-item.unread {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.message-item.expanded {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.message-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.65rem 0.85rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.message-header:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.message-type {
+  font-size: 0.65rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 0.3rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.message-type.combat {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+}
+
+.message-type.espionage {
+  background: rgba(96, 165, 250, 0.15);
+  color: #60a5fa;
+}
+
+.message-type.transport {
+  background: rgba(52, 211, 153, 0.15);
+  color: #34d399;
+}
+
+.message-type.system {
+  background: rgba(251, 191, 36, 0.15);
+  color: #fbbf24;
+}
+
+.message-title {
+  flex: 1;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.message-item.unread .message-title {
+  color: #fff;
+  font-weight: 600;
+}
+
+.message-time {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.message-delete {
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.2);
+  font-size: 0.75rem;
+  cursor: pointer;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+.message-delete:hover {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+}
+
+.message-body {
+  padding: 0 0.85rem 0.85rem;
+}
+
+/* Report details */
+.report-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.report-winner {
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.report-winner.attacker {
+  background: rgba(52, 211, 153, 0.12);
+  color: #34d399;
+}
+
+.report-winner.defender {
+  background: rgba(239, 68, 68, 0.12);
+  color: #f87171;
+}
+
+.report-winner.draw {
+  background: rgba(251, 191, 36, 0.12);
+  color: #fbbf24;
+}
+
+.report-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.75rem;
+}
+
+.report-table th {
+  text-align: left;
+  color: rgba(255, 255, 255, 0.4);
+  font-weight: 500;
+  padding: 0.3rem 0.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.report-table td {
+  padding: 0.3rem 0.5rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.report-table td.loss {
+  color: #f87171;
+}
+
+.report-rounds h4,
+.report-losses h4,
+.report-loot h4,
+.report-debris h4,
+.report-section h4 {
+  margin: 0 0 0.3rem;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.5);
+  font-weight: 500;
+}
+
+.report-target {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.report-target span {
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 0.8rem;
+}
+
+.moon-chance {
+  display: block;
+  margin-top: 0.3rem;
+  font-size: 0.8rem;
+  color: #fbbf24;
+}
+
+/* === Overview sections === */
+.overview-section {
+  margin-top: 1rem;
+  padding: 0.85rem 1rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 1rem;
+}
+
+.section-title {
+  margin: 0 0 0.5rem;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.5);
+  font-weight: 500;
+}
+
+.moon-section {
+  border-color: rgba(148, 163, 184, 0.15);
+  background: rgba(148, 163, 184, 0.04);
+}
