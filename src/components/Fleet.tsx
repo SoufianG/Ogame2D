@@ -34,8 +34,8 @@ export function Fleet() {
   const availableShips = Object.entries(planet.ships || {}).filter(([, count]) => count! > 0);
   const hasSelected = Object.values(selected).some((v) => v! > 0);
 
-  const handleSend = () => {
-    const ok = sendFleet(planet.id, destination, selected, mission, speed);
+  const handleSend = async () => {
+    const ok = await sendFleet(planet.id, destination, selected, mission, speed);
     if (ok) {
       setSelected({});
       setStep('select');

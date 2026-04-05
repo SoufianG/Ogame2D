@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import { migrateDb, closeDb } from './db/database.js';
+import { startGameLoop, stopGameLoop } from './engine/gameLoop.js';
 import authRoutes from './routes/auth.js';
 import planetRoutes from './routes/planets.js';
 import gameRoutes from './routes/game.js';
@@ -35,7 +36,10 @@ app.use('/api/alliance', allianceRoutes);
 app.use('/api/social', socialRoutes);
 app.use('/api/rankings', rankingRoutes);
 
-// Start
+// Start game loop
+startGameLoop();
+
+// Start HTTP server
 const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`OGame2D API running on port ${PORT}`);
 });
@@ -43,6 +47,7 @@ const server = app.listen(PORT, '0.0.0.0', () => {
 // Graceful shutdown
 process.on('SIGTERM', () => {
   console.log('Shutting down...');
+  stopGameLoop();
   server.close();
   closeDb();
   process.exit(0);
@@ -50,6 +55,7 @@ process.on('SIGTERM', () => {
 
 process.on('SIGINT', () => {
   console.log('Shutting down...');
+  stopGameLoop();
   server.close();
   closeDb();
   process.exit(0);

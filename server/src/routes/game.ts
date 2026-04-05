@@ -1,9 +1,352 @@
 import { Router } from 'express';
 import { getDb } from '../db/database.js';
 import { authMiddleware, type AuthRequest } from '../middleware/auth.js';
+import { computeProduction, computeStorage, getBuildingCost, getBuildingTime, getResearchTime } from '../engine/production.js';
+import { BUILDINGS } from '../data/buildings.js';
+import { RESEARCH } from '../data/research.js';
 
 const router = Router();
 router.use(authMiddleware);
+
+// === GAME STATE (full state for a player) ===
+
+interface PlanetRow {
+  id: string;
+  user_id: string;
+  name: string;
+  galaxy: number;
+  system: number;
+  position: number;
+  size: number;
+  temperature: number;
+  biome: string;
+  aquaticity: number;
+  metal: number;
+  crystal: number;
+  deuterium: number;
+  buildings: string;
+  ships: string;
+  defenses: string;
+  created_at: number;
+}
+
+// GET /api/game/state — Etat complet du joueur (planetes + production + queues)
+router.get('/state', (req: AuthRequest, res) => {
+  const db = getDb();
+  const userId = req.user!.userId;
+
+  const planets = db.prepare(
+    'SELECT * FROM planets WHERE user_id = ? ORDER BY galaxy, system, position',
+  ).all(userId) as PlanetRow[];
+
+  const researchRow = db.prepare('SELECT data FROM research WHERE user_id = ?').get(userId) as { data: string } | undefined;
+  const research = researchRow ? JSON.parse(researchRow.data) : {};
+
+  const researchQueue = db.prepare('SELECT * FROM research_queues WHERE user_id = ?').get(userId) as Record<string, unknown> | undefined;
+
+  const planetsData = planets.map((p) => {
+    const buildings = JSON.parse(p.buildings);
+    const ships = JSON.parse(p.ships);
+    const defenses = JSON.parse(p.defenses);
+    const production = computeProduction(buildings, p.temperature);
+    const storage = {
+      metal: computeStorage(buildings.metalStorage || 0),
+      crystal: computeStorage(buildings.crystalStorage || 0),
+      deuterium: computeStorage(buildings.deuteriumTank || 0),
+    };
+
+    const buildingQueues = db.prepare(
+      'SELECT * FROM building_queues WHERE planet_id = ? ORDER BY id',
+    ).all(p.id) as Record<string, unknown>[];
+
+    return {
+      id: p.id,
+      name: p.name,
+      galaxy: p.galaxy,
+      system: p.system,
+      position: p.position,
+      size: p.size,
+      temperature: p.temperature,
+      biome: p.biome,
+      aquaticity: p.aquaticity,
+      metal: p.metal,
+      crystal: p.crystal,
+      deuterium: p.deuterium,
+      buildings,
+      ships,
+      defenses,
+      production,
+      storage,
+      buildingQueues: buildingQueues.map((q) => ({
+        id: q.id,
+        building: q.building,
+        targetLevel: q.target_level,
+        remainingTime: q.remaining_time,
+        totalTime: q.total_time,
+      })),
+    };
+  });
+
+  const fleets = db.prepare(
+    'SELECT * FROM fleet_movements WHERE user_id = ? ORDER BY departure_time DESC',
+  ).all(userId) as Record<string, unknown>[];
+
+  res.json({
+    planets: planetsData,
+    research,
+    researchQueue: researchQueue ? {
+      planetId: researchQueue.planet_id,
+      research: researchQueue.research,
+      targetLevel: researchQueue.target_level,
+      remainingTime: researchQueue.remaining_time,
+      totalTime: researchQueue.total_time,
+    } : null,
+    fleets: fleets.map((f) => ({
+      id: f.id,
+      ships: JSON.parse(f.ships as string),
+      origin: { galaxy: f.origin_galaxy, system: f.origin_system, position: f.origin_position },
+      destination: { galaxy: f.dest_galaxy, system: f.dest_system, position: f.dest_position },
+      mission: f.mission,
+      cargo: JSON.parse(f.cargo as string),
+      departureTime: f.departure_time,
+      arrivalTime: f.arrival_time,
+      returnTime: f.return_time,
+    })),
+  });
+});
+
+// === BUILD — Lancer une construction ===
+
+// POST /api/game/build
+router.post('/build', (req: AuthRequest, res) => {
+  const db = getDb();
+  const userId = req.user!.userId;
+  const { planetId, building } = req.body as { planetId: string; building: string };
+
+  if (!planetId || !building || !BUILDINGS[building]) {
+    res.status(400).json({ error: 'Parametres invalides' });
+    return;
+  }
+
+  // Verifier propriete de la planete
+  const planet = db.prepare('SELECT * FROM planets WHERE id = ? AND user_id = ?').get(planetId, userId) as PlanetRow | undefined;
+  if (!planet) {
+    res.status(404).json({ error: 'Planete introuvable' });
+    return;
+  }
+
+  // Verifier qu'il n'y a pas deja une construction en cours sur cette planete
+  const existing = db.prepare('SELECT id FROM building_queues WHERE planet_id = ?').get(planetId);
+  if (existing) {
+    res.status(409).json({ error: 'Construction deja en cours sur cette planete' });
+    return;
+  }
+
+  const buildings = JSON.parse(planet.buildings);
+  const currentLevel = buildings[building] || 0;
+  const targetLevel = currentLevel + 1;
+
+  // Calculer le cout
+  const def = BUILDINGS[building];
+  const cost = getBuildingCost(def.baseCost, def.costFactor, targetLevel);
+
+  // Verifier les ressources
+  if (planet.metal < cost.metal || planet.crystal < cost.crystal || planet.deuterium < cost.deuterium) {
+    res.status(400).json({ error: 'Ressources insuffisantes' });
+    return;
+  }
+
+  // Verifier les prerequis
+  if (def.prerequisites.buildings) {
+    for (const [req_building, req_level] of Object.entries(def.prerequisites.buildings)) {
+      if ((buildings[req_building] || 0) < req_level) {
+        res.status(400).json({ error: `Prerequis non rempli: ${req_building} niveau ${req_level}` });
+        return;
+      }
+    }
+  }
+  if (def.prerequisites.research) {
+    const researchRow = db.prepare('SELECT data FROM research WHERE user_id = ?').get(userId) as { data: string } | undefined;
+    const researchData = researchRow ? JSON.parse(researchRow.data) : {};
+    for (const [req_research, req_level] of Object.entries(def.prerequisites.research)) {
+      if ((researchData[req_research] || 0) < req_level) {
+        res.status(400).json({ error: `Prerequis non rempli: ${req_research} niveau ${req_level}` });
+        return;
+      }
+    }
+  }
+
+  // Temps de construction
+  const roboticsLevel = buildings.roboticsFactory || 0;
+  const buildTime = getBuildingTime(cost, roboticsLevel);
+
+  // Deduire les ressources et creer la queue
+  db.prepare('UPDATE planets SET metal = metal - ?, crystal = crystal - ?, deuterium = deuterium - ? WHERE id = ?').run(
+    cost.metal, cost.crystal, cost.deuterium, planetId,
+  );
+
+  db.prepare(
+    'INSERT INTO building_queues (planet_id, building, target_level, remaining_time, total_time) VALUES (?, ?, ?, ?, ?)',
+  ).run(planetId, building, targetLevel, buildTime, buildTime);
+
+  res.json({
+    ok: true,
+    building,
+    targetLevel,
+    cost,
+    buildTime,
+  });
+});
+
+// POST /api/game/build/cancel
+router.post('/build/cancel', (req: AuthRequest, res) => {
+  const db = getDb();
+  const userId = req.user!.userId;
+  const { planetId } = req.body as { planetId: string };
+
+  const queue = db.prepare(`
+    SELECT bq.* FROM building_queues bq
+    JOIN planets p ON p.id = bq.planet_id
+    WHERE bq.planet_id = ? AND p.user_id = ?
+  `).get(planetId, userId) as { id: number; building: string; target_level: number } | undefined;
+
+  if (!queue) {
+    res.status(404).json({ error: 'Aucune construction en cours' });
+    return;
+  }
+
+  // Rembourser les ressources
+  const def = BUILDINGS[queue.building];
+  if (def) {
+    const cost = getBuildingCost(def.baseCost, def.costFactor, queue.target_level);
+    db.prepare('UPDATE planets SET metal = metal + ?, crystal = crystal + ?, deuterium = deuterium + ? WHERE id = ?').run(
+      cost.metal, cost.crystal, cost.deuterium, planetId,
+    );
+  }
+
+  db.prepare('DELETE FROM building_queues WHERE id = ?').run(queue.id);
+  res.json({ ok: true });
+});
+
+// === RESEARCH — Lancer une recherche ===
+
+// POST /api/game/research/start
+router.post('/research/start', (req: AuthRequest, res) => {
+  const db = getDb();
+  const userId = req.user!.userId;
+  const { planetId, research } = req.body as { planetId: string; research: string };
+
+  if (!planetId || !research || !RESEARCH[research]) {
+    res.status(400).json({ error: 'Parametres invalides' });
+    return;
+  }
+
+  // Verifier qu'il n'y a pas deja une recherche en cours
+  const existingQueue = db.prepare('SELECT user_id FROM research_queues WHERE user_id = ?').get(userId);
+  if (existingQueue) {
+    res.status(409).json({ error: 'Recherche deja en cours' });
+    return;
+  }
+
+  // Verifier propriete de la planete
+  const planet = db.prepare('SELECT * FROM planets WHERE id = ? AND user_id = ?').get(planetId, userId) as PlanetRow | undefined;
+  if (!planet) {
+    res.status(404).json({ error: 'Planete introuvable' });
+    return;
+  }
+
+  const buildings = JSON.parse(planet.buildings);
+  const researchRow = db.prepare('SELECT data FROM research WHERE user_id = ?').get(userId) as { data: string } | undefined;
+  const researchData = researchRow ? JSON.parse(researchRow.data) : {};
+
+  const currentLevel = researchData[research] || 0;
+  const targetLevel = currentLevel + 1;
+
+  const def = RESEARCH[research];
+  const factor = Math.pow(def.costFactor, targetLevel - 1);
+  const cost = {
+    metal: Math.floor(def.baseCost.metal * factor),
+    crystal: Math.floor(def.baseCost.crystal * factor),
+    deuterium: Math.floor(def.baseCost.deuterium * factor),
+  };
+
+  // Verifier les ressources
+  if (planet.metal < cost.metal || planet.crystal < cost.crystal || planet.deuterium < cost.deuterium) {
+    res.status(400).json({ error: 'Ressources insuffisantes' });
+    return;
+  }
+
+  // Verifier les prerequis
+  if (def.prerequisites.buildings) {
+    for (const [req_building, req_level] of Object.entries(def.prerequisites.buildings)) {
+      if ((buildings[req_building] || 0) < req_level) {
+        res.status(400).json({ error: `Prerequis non rempli: ${req_building} niveau ${req_level}` });
+        return;
+      }
+    }
+  }
+  if (def.prerequisites.research) {
+    for (const [req_research, req_level] of Object.entries(def.prerequisites.research)) {
+      if ((researchData[req_research] || 0) < req_level) {
+        res.status(400).json({ error: `Prerequis non rempli: ${req_research} niveau ${req_level}` });
+        return;
+      }
+    }
+  }
+
+  // Temps de recherche
+  const labLevel = buildings.researchLab || 0;
+  const researchTime = getResearchTime(cost, labLevel);
+
+  // Deduire les ressources
+  db.prepare('UPDATE planets SET metal = metal - ?, crystal = crystal - ?, deuterium = deuterium - ? WHERE id = ?').run(
+    cost.metal, cost.crystal, cost.deuterium, planetId,
+  );
+
+  db.prepare(
+    'INSERT INTO research_queues (user_id, planet_id, research, target_level, remaining_time, total_time) VALUES (?, ?, ?, ?, ?, ?)',
+  ).run(userId, planetId, research, targetLevel, researchTime, researchTime);
+
+  res.json({
+    ok: true,
+    research,
+    targetLevel,
+    cost,
+    researchTime,
+  });
+});
+
+// POST /api/game/research/cancel
+router.post('/research/cancel', (req: AuthRequest, res) => {
+  const db = getDb();
+  const userId = req.user!.userId;
+
+  const queue = db.prepare('SELECT * FROM research_queues WHERE user_id = ?').get(userId) as {
+    planet_id: string; research: string; target_level: number;
+  } | undefined;
+
+  if (!queue) {
+    res.status(404).json({ error: 'Aucune recherche en cours' });
+    return;
+  }
+
+  // Rembourser
+  const def = RESEARCH[queue.research];
+  if (def) {
+    const factor = Math.pow(def.costFactor, queue.target_level - 1);
+    const cost = {
+      metal: Math.floor(def.baseCost.metal * factor),
+      crystal: Math.floor(def.baseCost.crystal * factor),
+      deuterium: Math.floor(def.baseCost.deuterium * factor),
+    };
+    db.prepare('UPDATE planets SET metal = metal + ?, crystal = crystal + ?, deuterium = deuterium + ? WHERE id = ?').run(
+      cost.metal, cost.crystal, cost.deuterium, queue.planet_id,
+    );
+  }
+
+  db.prepare('DELETE FROM research_queues WHERE user_id = ?').run(userId);
+  res.json({ ok: true });
+});
 
 // === RESEARCH ===
 
@@ -89,6 +432,105 @@ router.delete('/messages/:id', (req: AuthRequest, res) => {
     req.user!.userId,
   );
   res.json({ ok: true });
+});
+
+// === FLEET — Envoyer une flotte ===
+
+// Vitesses de base par type de vaisseau
+const SHIP_SPEEDS: Record<string, number> = {
+  smallCargo: 5000, largeCargo: 7500, recycler: 2000, espionageProbe: 100000000,
+  solarSatellite: 0, colonyShip: 2500, lightFighter: 12500, heavyFighter: 10000,
+  cruiser: 15000, battleship: 10000, bomber: 4000, destroyer: 5000, deathstar: 100,
+};
+
+const SHIP_CARGO: Record<string, number> = {
+  smallCargo: 5000, largeCargo: 25000, recycler: 20000, colonyShip: 7500,
+};
+
+// POST /api/game/fleet/send
+router.post('/fleet/send', (req: AuthRequest, res) => {
+  const db = getDb();
+  const userId = req.user!.userId;
+  const { planetId, destination, ships, mission, speed } = req.body as {
+    planetId: string;
+    destination: { galaxy: number; system: number; position: number };
+    ships: Record<string, number>;
+    mission: string;
+    speed: number;
+  };
+
+  if (!planetId || !destination || !ships || !mission) {
+    res.status(400).json({ error: 'Parametres invalides' });
+    return;
+  }
+
+  const planet = db.prepare('SELECT * FROM planets WHERE id = ? AND user_id = ?').get(planetId, userId) as PlanetRow | undefined;
+  if (!planet) {
+    res.status(404).json({ error: 'Planete introuvable' });
+    return;
+  }
+
+  const planetShips = JSON.parse(planet.ships) as Record<string, number>;
+
+  // Verifier la disponibilite des vaisseaux
+  for (const [type, count] of Object.entries(ships)) {
+    if ((planetShips[type] || 0) < count) {
+      res.status(400).json({ error: `Pas assez de ${type}` });
+      return;
+    }
+  }
+
+  // Distance
+  const origin = { galaxy: planet.galaxy, system: planet.system, position: planet.position };
+  let distance: number;
+  if (origin.galaxy !== destination.galaxy) {
+    distance = 20000 * Math.abs(origin.galaxy - destination.galaxy);
+  } else if (origin.system !== destination.system) {
+    distance = 2700 + 95 * Math.abs(origin.system - destination.system);
+  } else {
+    distance = 1000 + 5 * Math.abs(origin.position - destination.position);
+  }
+
+  // Vitesse la plus lente
+  const slowest = Math.min(...Object.keys(ships).map((type) => SHIP_SPEEDS[type] || 1000));
+  const flightTime = Math.max(5, Math.floor(10 + (35000 / ((speed || 100) / 100) * Math.sqrt(distance * 10 / slowest))));
+
+  // Consommation deuterium
+  const totalShips = Object.values(ships).reduce((a, b) => a + b, 0);
+  const fuelCost = Math.floor(distance * totalShips * 0.01);
+
+  if (planet.deuterium < fuelCost) {
+    res.status(400).json({ error: 'Deuterium insuffisant pour le carburant' });
+    return;
+  }
+
+  // Retirer les vaisseaux
+  for (const [type, count] of Object.entries(ships)) {
+    planetShips[type] = (planetShips[type] || 0) - count;
+    if (planetShips[type] <= 0) delete planetShips[type];
+  }
+
+  const now = Math.floor(Date.now() / 1000);
+  const fleetId = `fleet-${now}-${Math.random().toString(36).slice(2, 8)}`;
+  const arrivalTime = now + flightTime;
+  const returnTime = mission !== 'deploy' ? now + flightTime * 2 : null;
+
+  db.prepare('UPDATE planets SET ships = ?, deuterium = deuterium - ? WHERE id = ?').run(
+    JSON.stringify(planetShips), fuelCost, planetId,
+  );
+
+  db.prepare(`
+    INSERT INTO fleet_movements (id, user_id, ships, origin_galaxy, origin_system, origin_position,
+      dest_galaxy, dest_system, dest_position, mission, cargo, speed, departure_time, arrival_time, return_time)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '{}', ?, ?, ?, ?)
+  `).run(
+    fleetId, userId, JSON.stringify(ships),
+    origin.galaxy, origin.system, origin.position,
+    destination.galaxy, destination.system, destination.position,
+    mission, speed || 100, now, arrivalTime, returnTime,
+  );
+
+  res.json({ ok: true, fleetId, arrivalTime: arrivalTime * 1000, fuelCost });
 });
 
 // === GALAXY VIEW ===

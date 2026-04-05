@@ -37,11 +37,11 @@ function BuildingCard({ data }: { data: BuildingData }) {
   const locked = missing.length > 0;
   const canBuild = !locked && affordable && !queueBusy && !noSlots;
 
-  const handleClick = () => {
+  const handleClick = async () => {
     if (isBuilding) {
-      cancelBuilding(planet.id);
+      await cancelBuilding(planet.id);
     } else if (canBuild) {
-      startBuilding(planet.id, data.id);
+      await startBuilding(planet.id, data.id);
     }
   };
 

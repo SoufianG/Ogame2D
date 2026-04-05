@@ -20,18 +20,59 @@ Tout tourne dans **2 containers Docker** orchestres par `docker-compose` :
 - **Express 5** + TypeScript, leger et adapte ARM64
 - **SQLite** via `better-sqlite3` (pas besoin d'un PostgreSQL pour un jeu solo/petit groupe)
 - **Auth JWT** : inscription/connexion avec bcrypt, tokens 7 jours
+- **Game loop serveur** : le jeu tourne meme quand les joueurs sont offline
 - **API REST** :
   - `POST /api/auth/register` — inscription
-  - `POST /api/auth/login` — connexion
+  - `POST /api/auth/login` — connexion (+ rattrapage offline via `catchUp`)
   - `GET /api/planets` — planetes du joueur
   - `POST /api/planets` — creer la planete de depart
   - `PUT /api/planets/:id` — sauvegarder l'etat
+  - `GET /api/game/state` — **etat complet** (planetes, production, queues, recherche, flottes)
+  - `POST /api/game/build` — lancer une construction (validation serveur)
+  - `POST /api/game/build/cancel` — annuler une construction (remboursement)
+  - `POST /api/game/research/start` — lancer une recherche
+  - `POST /api/game/research/cancel` — annuler une recherche
+  - `POST /api/game/fleet/send` — envoyer une flotte (calcul distance/carburant serveur)
   - `GET /api/game/research` — recherches du joueur
   - `PUT /api/game/research` — sauvegarder les recherches
   - `GET /api/game/fleets` — flottes en mouvement
   - `GET /api/game/messages` — messages/rapports
+  - `PUT /api/game/messages/:id/read` — marquer un message comme lu
+  - `DELETE /api/game/messages/:id` — supprimer un message
   - `GET /api/game/galaxy/:galaxy/:system` — vue galaxie
 - **Schema DB** : `server/src/db/schema.sql` (users, planets, moons, research, queues, fleets, messages)
+
+### Game Loop Serveur (`server/src/engine/`)
+
+Le serveur execute un **tick toutes les 5 secondes** qui fait tourner le jeu :
+
+1. **Production de ressources** — calcule metal/cristal/deuterium pour toutes les planetes, avec caps de stockage
+2. **Timers de construction** — decremente le temps restant, finalise le batiment quand le timer atteint 0
+3. **Timers de recherche** — idem pour les recherches en cours
+4. **Resolution des flottes** — quand une flotte arrive a destination : combat (NPC), espionnage, retour avec butin
+
+**Rattrapage offline (`catchUp`)** : quand un joueur se connecte, le serveur calcule toute la production accumulee depuis sa derniere connexion et complete les constructions/recherches terminees.
+
+### Architecture Client-Serveur
+
+```
+[Frontend React]                    [Serveur Express]
+     |                                    |
+     |--- Poll /api/game/state (5s) ---->|  <- source de verite
+     |<-- etat complet (planets, -------|
+     |    queues, fleets, research)      |
+     |                                    |
+     |--- POST /api/game/build --------->|  <- validation serveur
+     |--- POST /api/game/research ------>|     (cout, prerequis)
+     |--- POST /api/game/fleet/send ---->|
+     |                                    |
+     |  Interpolation locale (1s) :      |  Game loop (5s) :
+     |  - compteurs de ressources        |  - production
+     |  - timers de construction         |  - timers
+     |  (affichage fluide entre polls)   |  - flottes
+```
+
+Le **serveur est la source de verite**. Le frontend fait de l'interpolation locale pour un affichage fluide, mais toutes les actions passent par l'API.
 
 ### Docker
 - `Dockerfile.client` — build multi-stage : npm build > Nginx Alpine

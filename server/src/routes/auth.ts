@@ -3,6 +3,7 @@ import { z } from 'zod';
 import bcrypt from 'bcryptjs';
 import { getDb } from '../db/database.js';
 import { signToken } from '../utils/jwt.js';
+import { catchUp } from '../engine/gameLoop.js';
 import { randomUUID } from 'crypto';
 
 const router = Router();
@@ -76,6 +77,9 @@ router.post('/login', async (req, res) => {
     res.status(401).json({ error: 'Identifiants incorrects' });
     return;
   }
+
+  // Rattraper la production offline avant de mettre a jour last_login
+  catchUp(user.id);
 
   // Mettre a jour last_login
   db.prepare('UPDATE users SET last_login = unixepoch() WHERE id = ?').run(user.id);

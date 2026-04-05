@@ -31,11 +31,11 @@ function ResearchCard({ data }: { data: ResearchData }) {
   const locked = missing.length > 0 || !hasLab;
   const canResearch = !locked && affordable && !queueBusy;
 
-  const handleClick = () => {
+  const handleClick = async () => {
     if (isResearching) {
-      cancelResearch();
+      await cancelResearch();
     } else if (canResearch) {
-      startResearch(planet.id, data.id);
+      await startResearch(planet.id, data.id);
     }
   };
 
