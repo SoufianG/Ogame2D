@@ -11,6 +11,7 @@ import { Auth } from './components/Auth';
 import { Alliance } from './components/Alliance';
 import { Social } from './components/Social';
 import { Rankings } from './components/Rankings';
+import { Changelog } from './components/Changelog';
 import { useResourceTick } from './hooks/useResourceTick';
 import { useAuth } from './hooks/useAuth';
 import { useSync } from './hooks/useSync';
@@ -29,6 +30,7 @@ const NAV_ITEMS = [
   { path: '/alliance', label: 'Alliance' },
   { path: '/social', label: 'Courrier' },
   { path: '/rankings', label: 'Classement' },
+  { path: '/changelog', label: 'Changelog' },
 ];
 
 function PlanetSwitcher() {
@@ -54,12 +56,42 @@ function PlanetSwitcher() {
   );
 }
 
+function MobileHeader({ username, onLogout }: { username: string; onLogout: () => void }) {
+  const planets = useGameStore((s) => s.planets);
+  const currentPlanetId = useGameStore((s) => s.currentPlanetId);
+  const setCurrentPlanet = useGameStore((s) => s.setCurrentPlanet);
+
+  return (
+    <div className="mobile-header">
+      <span className="mobile-title">OGame2D</span>
+      {planets.length > 1 && (
+        <select
+          className="mobile-planet-select"
+          value={currentPlanetId ?? ''}
+          onChange={(e) => setCurrentPlanet(e.target.value)}
+        >
+          {planets.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name} [{p.coordinates.galaxy}:{p.coordinates.system}:{p.coordinates.position}]
+            </option>
+          ))}
+        </select>
+      )}
+      <div className="mobile-user">
+        <span className="mobile-username">{username}</span>
+        <button className="nav-logout" onClick={onLogout}>X</button>
+      </div>
+    </div>
+  );
+}
+
 function GameApp({ username, onLogout }: { username: string; onLogout: () => void }) {
   useResourceTick();
   useSync();
 
   return (
     <div className="game-layout">
+      <MobileHeader username={username} onLogout={onLogout} />
       <nav className="game-nav">
         <div className="game-title">OGame2D</div>
         <PlanetSwitcher />
@@ -90,6 +122,7 @@ function GameApp({ username, onLogout }: { username: string; onLogout: () => voi
           <Route path="/alliance" element={<Alliance />} />
           <Route path="/social" element={<Social />} />
           <Route path="/rankings" element={<Rankings />} />
+          <Route path="/changelog" element={<Changelog />} />
         </Routes>
       </main>
     </div>
