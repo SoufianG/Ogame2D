@@ -27,7 +27,7 @@ jobs:
       # Client
       - name: Install client deps
         if: matrix.component == 'client'
-        run: npm ci
+        run: npm install
 
       - name: Lint client
         if: matrix.component == 'client'
@@ -46,7 +46,7 @@ jobs:
       - name: Install server deps
         if: matrix.component == 'server'
         working-directory: server
-        run: npm ci
+        run: npm install
 
       - name: Type-check server
         if: matrix.component == 'server'
