@@ -29,13 +29,8 @@ function BuildingCard({ data }: { data: BuildingData }) {
   const isBuilding = buildingQueue?.building === data.id;
   const queueBusy = buildingQueue !== null && buildingQueue !== undefined;
 
-  // Verifier si c'est un nouveau batiment et s'il reste des cases
-  const isNew = currentLevel === 0;
-  const usedSlots = Object.values(planet.buildings).filter((l) => l > 0).length;
-  const noSlots = isNew && usedSlots >= planet.size;
-
   const locked = missing.length > 0;
-  const canBuild = !locked && affordable && !queueBusy && !noSlots;
+  const canBuild = !locked && affordable && !queueBusy;
 
   const handleClick = async () => {
     if (isBuilding) {
@@ -48,6 +43,7 @@ function BuildingCard({ data }: { data: BuildingData }) {
   return (
     <div className={`building-card ${locked ? 'locked' : ''} ${isBuilding ? 'building' : ''}`}>
       <div className="building-header">
+        <img src="/assets/placeholder.png" alt="" className="card-icon" />
         <div className="building-title">
           <h3>{data.name}</h3>
           <span className="building-level">Niv. {currentLevel}</span>
@@ -59,14 +55,14 @@ function BuildingCard({ data }: { data: BuildingData }) {
       {/* Cout */}
       <div className="building-cost">
         <span className={planet.resources.metal >= cost.metal ? '' : 'insufficient'}>
-          Fe {formatNumber(cost.metal)}
+          <img src="/assets/fer.png" alt="" className="cost-icon" /> {formatNumber(cost.metal)}
         </span>
         <span className={planet.resources.crystal >= cost.crystal ? '' : 'insufficient'}>
-          Cr {formatNumber(cost.crystal)}
+          <img src="/assets/cristal.png" alt="" className="cost-icon" /> {formatNumber(cost.crystal)}
         </span>
         {cost.deuterium > 0 && (
           <span className={planet.resources.deuterium >= cost.deuterium ? '' : 'insufficient'}>
-            De {formatNumber(cost.deuterium)}
+            <img src="/assets/deuterium.png" alt="" className="cost-icon" /> {formatNumber(cost.deuterium)}
           </span>
         )}
         <span className="build-time">{formatTime(time)}</span>
@@ -80,12 +76,6 @@ function BuildingCard({ data }: { data: BuildingData }) {
               {m.id} niv. {m.required} (actuel: {m.current})
             </span>
           ))}
-        </div>
-      )}
-
-      {noSlots && !locked && (
-        <div className="building-prereqs">
-          <span className="prereq-missing">Plus de cases disponibles</span>
         </div>
       )}
 
@@ -112,7 +102,7 @@ function BuildingCard({ data }: { data: BuildingData }) {
         onClick={handleClick}
         disabled={!canBuild && !isBuilding}
       >
-        {isBuilding ? 'Annuler' : locked ? 'Verrouille' : canBuild ? `Construire niv. ${nextLevel}` : 'Ressources insuffisantes'}
+        {isBuilding ? 'Annuler' : locked ? 'Verrouille' : canBuild ? `Construire niv. ${nextLevel}` : !affordable ? 'Ressources insuffisantes' : 'Indisponible'}
       </button>
     </div>
   );
@@ -123,13 +113,10 @@ export function Buildings() {
 
   if (!planet) return <div>Aucune planete selectionnee</div>;
 
-  const usedSlots = Object.values(planet.buildings).filter((l) => l > 0).length;
-
   return (
     <div className="buildings-page">
       <div className="page-header">
         <h2>Batiments</h2>
-        <span className="slots-info">Cases : {usedSlots} / {planet.size}</span>
       </div>
 
       {BUILDING_CATEGORIES.map(({ key, label }) => {

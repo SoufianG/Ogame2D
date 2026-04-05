@@ -9,7 +9,6 @@ import { Galaxy } from './components/Galaxy';
 import { Messages } from './components/Messages';
 import { Auth } from './components/Auth';
 import { Alliance } from './components/Alliance';
-import { Social } from './components/Social';
 import { Rankings } from './components/Rankings';
 import { Changelog } from './components/Changelog';
 import { useResourceTick } from './hooks/useResourceTick';
@@ -28,7 +27,6 @@ const NAV_ITEMS = [
   { path: '/galaxy', label: 'Galaxie' },
   { path: '/messages', label: 'Messages' },
   { path: '/alliance', label: 'Alliance' },
-  { path: '/social', label: 'Courrier' },
   { path: '/rankings', label: 'Classement' },
   { path: '/changelog', label: 'Changelog' },
 ];
@@ -89,6 +87,8 @@ function GameApp({ username, onLogout }: { username: string; onLogout: () => voi
   useResourceTick();
   useSync();
 
+  const unreadMessages = useGameStore((s) => s.messages.filter((m) => !m.read).length);
+
   return (
     <div className="game-layout">
       <MobileHeader username={username} onLogout={onLogout} />
@@ -100,6 +100,9 @@ function GameApp({ username, onLogout }: { username: string; onLogout: () => voi
             <li key={path}>
               <NavLink to={path} end={path === '/'}>
                 {label}
+                {path === '/messages' && unreadMessages > 0 && (
+                  <span className="nav-badge">{unreadMessages}</span>
+                )}
               </NavLink>
             </li>
           ))}
@@ -120,7 +123,6 @@ function GameApp({ username, onLogout }: { username: string; onLogout: () => voi
           <Route path="/galaxy" element={<Galaxy />} />
           <Route path="/messages" element={<Messages />} />
           <Route path="/alliance" element={<Alliance />} />
-          <Route path="/social" element={<Social />} />
           <Route path="/rankings" element={<Rankings />} />
           <Route path="/changelog" element={<Changelog />} />
         </Routes>

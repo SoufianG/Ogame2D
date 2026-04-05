@@ -26,6 +26,7 @@ function DefenseCard({ data }: { data: UnitData }) {
   return (
     <div className={`building-card ${locked ? 'locked' : ''}`}>
       <div className="building-header">
+        <img src="/assets/placeholder.png" alt="" className="card-icon" />
         <div className="building-title">
           <h3>{data.name}</h3>
         </div>
@@ -42,17 +43,17 @@ function DefenseCard({ data }: { data: UnitData }) {
       <div className="building-cost">
         {data.cost.metal > 0 && (
           <span className={planet.resources.metal >= totalCost.metal ? '' : 'insufficient'}>
-            Fe {formatNumber(totalCost.metal)}
+            <img src="/assets/fer.png" alt="" className="cost-icon" /> {formatNumber(totalCost.metal)}
           </span>
         )}
         {data.cost.crystal > 0 && (
           <span className={planet.resources.crystal >= totalCost.crystal ? '' : 'insufficient'}>
-            Cr {formatNumber(totalCost.crystal)}
+            <img src="/assets/cristal.png" alt="" className="cost-icon" /> {formatNumber(totalCost.crystal)}
           </span>
         )}
         {data.cost.deuterium > 0 && (
           <span className={planet.resources.deuterium >= totalCost.deuterium ? '' : 'insufficient'}>
-            De {formatNumber(totalCost.deuterium)}
+            <img src="/assets/deuterium.png" alt="" className="cost-icon" /> {formatNumber(totalCost.deuterium)}
           </span>
         )}
         <span className="build-time">{formatTime(unitTime * quantity)}</span>

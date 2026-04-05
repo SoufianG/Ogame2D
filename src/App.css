@@ -84,6 +84,45 @@
   border-color: rgba(239, 68, 68, 0.2);
 }
 
+.nav-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #ef4444;
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  margin-left: 6px;
+  line-height: 1;
+}
+
+.message-filter-separator {
+  color: rgba(255, 255, 255, 0.2);
+  align-self: center;
+  margin: 0 2px;
+  font-size: 0.9rem;
+}
+
+.msg-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #ef4444;
+  color: #fff;
+  font-size: 0.6rem;
+  font-weight: 700;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+  border-radius: 7px;
+  margin-left: 4px;
+  line-height: 1;
+}
+
 .game-nav ul {
   list-style: none;
   padding: 0;
@@ -157,6 +196,13 @@
   align-items: center;
   justify-content: center;
   font-size: 0.9rem;
+  flex-shrink: 0;
+}
+
+.resource-img {
+  width: 28px;
+  height: 28px;
+  image-rendering: pixelated;
   flex-shrink: 0;
 }
 
@@ -371,12 +417,32 @@
   line-height: 1.4;
 }
 
+/* Card icon (placeholder for buildings/ships/defenses/research) */
+.card-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 0.5rem;
+  object-fit: cover;
+  flex-shrink: 0;
+  image-rendering: pixelated;
+}
+
+/* Cost inline icon */
+.cost-icon {
+  width: 14px;
+  height: 14px;
+  vertical-align: middle;
+  margin-right: 2px;
+  image-rendering: pixelated;
+}
+
 .building-cost {
   display: flex;
   gap: 0.6rem;
   flex-wrap: wrap;
   font-size: 0.78rem;
   color: rgba(255, 255, 255, 0.6);
+  align-items: center;
 }
 
 .building-cost .insufficient {
@@ -1160,25 +1226,262 @@
   color: #fbbf24;
 }
 
+/* === Planet name editing === */
+.planet-name {
+  cursor: pointer;
+}
+
+.rename-hint {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.2);
+  margin-left: 0.3rem;
+}
+
+.planet-name:hover .rename-hint {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.planet-name-edit {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+}
+
+.planet-name-input {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 0.5rem;
+  padding: 0.4rem 0.7rem;
+  color: #fff;
+  font-size: 1.2rem;
+  font-weight: 700;
+  width: 200px;
+}
+
+.planet-name-input:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* === Other planets row === */
+.other-planets {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding: 0.25rem 0;
+}
+
+.mini-planet-card {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 0.75rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+
+.mini-planet-card:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.mini-planet-card.active {
+  border-color: rgba(96, 165, 250, 0.3);
+  background: rgba(96, 165, 250, 0.06);
+}
+
+.mini-planet-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.mini-planet-name {
+  font-size: 0.8rem;
+  color: #fff;
+  font-weight: 600;
+}
+
+.mini-planet-coords {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.35);
+}
+
+/* === Activity items (construction, research, fleets on overview) === */
+.overview-activity {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.activity-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.65rem 0.85rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 0.75rem;
+}
+
+.activity-item.building {
+  border-color: rgba(96, 165, 250, 0.2);
+  background: rgba(96, 165, 250, 0.04);
+}
+
+.activity-item.research {
+  border-color: rgba(168, 85, 247, 0.2);
+  background: rgba(168, 85, 247, 0.04);
+}
+
+.activity-item.fleet {
+  border-color: rgba(52, 211, 153, 0.15);
+}
+
+.activity-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 0.4rem;
+  image-rendering: pixelated;
+  flex-shrink: 0;
+}
+
+.activity-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.activity-label {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.4);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+}
+
+.activity-detail {
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.7);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.activity-timer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 80px;
+  align-items: flex-end;
+}
+
+.fleet-movements-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
 /* === Overview sections === */
 .overview-section {
-  margin-top: 1rem;
-  padding: 0.85rem 1rem;
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 1rem;
+  overflow: hidden;
+}
+
+.section-header {
+  padding: 0.65rem 0.85rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.section-header:hover {
+  background: rgba(255, 255, 255, 0.03);
 }
 
 .section-title {
-  margin: 0 0 0.5rem;
+  margin: 0;
   font-size: 0.85rem;
   color: rgba(255, 255, 255, 0.5);
   font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.section-count {
+  font-size: 0.7rem;
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.6);
+  padding: 0.1rem 0.45rem;
+  border-radius: 0.35rem;
+  font-weight: 600;
+}
+
+.section-content {
+  padding: 0 0.85rem 0.85rem;
+}
+
+/* Unit list in collapsible sections */
+.unit-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.unit-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.35rem 0;
+  font-size: 0.82rem;
+}
+
+.unit-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 0.3rem;
+  image-rendering: pixelated;
+  flex-shrink: 0;
+}
+
+.unit-name {
+  color: rgba(255, 255, 255, 0.6);
+  flex: 1;
+}
+
+.unit-qty {
+  color: rgba(255, 255, 255, 0.4);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.empty-text {
+  color: rgba(255, 255, 255, 0.25);
+  font-size: 0.8rem;
+  margin: 0;
+  font-style: italic;
 }
 
 .moon-section {
   border-color: rgba(148, 163, 184, 0.15);
   background: rgba(148, 163, 184, 0.04);
+}
+
+.moon-section .section-title {
+  padding: 0.65rem 0.85rem;
+}
+
+.moon-section .planet-stats {
+  padding: 0 0.85rem 0.85rem;
 }
 
 /* === Auth Page === */

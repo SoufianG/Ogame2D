@@ -124,4 +124,26 @@ router.put('/:id', (req: AuthRequest, res) => {
   res.json({ ok: true });
 });
 
+// PUT /api/planets/:id/rename — Renommer une planete
+router.put('/:id/rename', (req: AuthRequest, res) => {
+  const db = getDb();
+  const userId = req.user!.userId;
+  const { id } = req.params;
+  const { name } = req.body as { name: string };
+
+  if (!name || name.trim().length < 1 || name.trim().length > 24) {
+    res.status(400).json({ error: 'Nom invalide (1-24 caracteres)' });
+    return;
+  }
+
+  const planet = db.prepare('SELECT id FROM planets WHERE id = ? AND user_id = ?').get(id, userId);
+  if (!planet) {
+    res.status(404).json({ error: 'Planete introuvable' });
+    return;
+  }
+
+  db.prepare('UPDATE planets SET name = ? WHERE id = ?').run(name.trim(), id);
+  res.json({ ok: true });
+});
+
 export default router;

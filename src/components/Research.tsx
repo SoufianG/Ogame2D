@@ -42,6 +42,7 @@ function ResearchCard({ data }: { data: ResearchData }) {
   return (
     <div className={`building-card ${locked ? 'locked' : ''} ${isResearching ? 'building' : ''}`}>
       <div className="building-header">
+        <img src="/assets/placeholder.png" alt="" className="card-icon" />
         <div className="building-title">
           <h3>{data.name}</h3>
           <span className="building-level">Niv. {currentLevel}</span>
@@ -53,17 +54,17 @@ function ResearchCard({ data }: { data: ResearchData }) {
       <div className="building-cost">
         {cost.metal > 0 && (
           <span className={planet.resources.metal >= cost.metal ? '' : 'insufficient'}>
-            Fe {formatNumber(cost.metal)}
+            <img src="/assets/fer.png" alt="" className="cost-icon" /> {formatNumber(cost.metal)}
           </span>
         )}
         {cost.crystal > 0 && (
           <span className={planet.resources.crystal >= cost.crystal ? '' : 'insufficient'}>
-            Cr {formatNumber(cost.crystal)}
+            <img src="/assets/cristal.png" alt="" className="cost-icon" /> {formatNumber(cost.crystal)}
           </span>
         )}
         {cost.deuterium > 0 && (
           <span className={planet.resources.deuterium >= cost.deuterium ? '' : 'insufficient'}>
-            De {formatNumber(cost.deuterium)}
+            <img src="/assets/deuterium.png" alt="" className="cost-icon" /> {formatNumber(cost.deuterium)}
           </span>
         )}
         <span className="build-time">{formatTime(time)}</span>
