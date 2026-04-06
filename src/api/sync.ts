@@ -3,7 +3,7 @@ import { useGameStore } from '../store/gameStore';
 import type { Planet } from '../types';
 import type { BuildingType } from '../types/building';
 import type { ResearchType } from '../types/research';
-import type { ShipType, DefenseType, MissionType } from '../types/fleet';
+import type { ShipType, MissionType } from '../types/fleet';
 import { getBiome } from '../types/planet';
 import type { BuildingQueueItem, ResearchQueueItem, ShipyardQueueItem, GameMessage } from '../store/gameStore';
 

@@ -42,9 +42,6 @@ export function Galaxy() {
       for (const sp of serverPlanets) {
         const slot = baseSystem.slots.find((s) => s.position === sp.position);
         if (slot) {
-          const currentUserId = useGameStore.getState().planets[0]?.id ?
-            undefined : undefined;
-
           // Determiner si c'est le joueur courant
           const myPlanets = useGameStore.getState().planets;
           const isMe = myPlanets.some(
