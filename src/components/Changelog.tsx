@@ -1,5 +1,25 @@
 const CHANGELOG = [
   {
+    version: '0.6.0',
+    date: '2026-04-06',
+    title: 'Chantier Naval, Galaxie & Interface',
+    entries: [
+      { type: 'new' as const, text: 'Construction de vaisseaux et defenses cote serveur avec file d\'attente' },
+      { type: 'new' as const, text: 'La vue Galaxie affiche les planetes de tous les joueurs en temps reel' },
+      { type: 'new' as const, text: 'Barre de ressources visible sur toutes les pages' },
+      { type: 'new' as const, text: 'Ressources affichees a cote de chaque planete dans l\'apercu' },
+      { type: 'new' as const, text: 'Messages et Courrier fusionnes en un seul onglet avec badge de notification' },
+      { type: 'new' as const, text: 'Renommage de planete en cliquant sur son nom' },
+      { type: 'new' as const, text: 'Icones de ressources (metal, cristal, deuterium) sur toutes les cartes' },
+      { type: 'improve' as const, text: 'Apercu repense : planete courante en grand, autres en miniature' },
+      { type: 'improve' as const, text: 'Sections collapsibles pour la flotte a quai et les defenses' },
+      { type: 'improve' as const, text: 'Progression construction et recherche visibles depuis l\'apercu' },
+      { type: 'fix' as const, text: 'Timers de construction bases sur des timestamps absolus (resistant aux restarts serveur)' },
+      { type: 'fix' as const, text: 'Rattrapage des files de construction au demarrage du serveur' },
+      { type: 'fix' as const, text: 'Les constructions terminees pendant une absence sont correctement appliquees' },
+    ],
+  },
+  {
     version: '0.5.1',
     date: '2026-04-05',
     title: 'Game Loop Serveur',
