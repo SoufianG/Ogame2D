@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useGameStore } from '../store/gameStore';
+import { useToastStore } from '../store/toastStore';
 import { computeProduction, computeStorage } from '../utils/production';
 import { refreshGameState, apiLoadMessages } from '../api/sync';
 import { getToken } from '../api/client';
@@ -54,10 +55,57 @@ export function useResourceTick() {
       // Poll serveur toutes les 5s
       if (now - lastPoll.current >= POLL_INTERVAL && getToken()) {
         lastPoll.current = now;
-        refreshGameState();
+
+        // Snapshot avant refresh pour detecter les changements
+        const before = useGameStore.getState();
+        const prevQueues = { ...before.buildingQueues };
+        const prevResearch = before.researchQueue;
+        const prevFleets = before.fleetMovements.length;
+        const prevMsgCount = before.messages.length;
+
+        refreshGameState().then(() => {
+          const after = useGameStore.getState();
+          const addToast = useToastStore.getState().addToast;
+
+          // Construction terminee
+          for (const [planetId, queue] of Object.entries(prevQueues)) {
+            if (queue && queue.remainingTime <= 5 && !after.buildingQueues[planetId]) {
+              const planet = after.planets.find((p) => p.id === planetId);
+              addToast('building', 'Construction terminee', `${queue.building} niv. ${queue.targetLevel} sur ${planet?.name || 'planete'}`);
+            }
+          }
+
+          // Recherche terminee
+          if (prevResearch && prevResearch.remainingTime <= 5 && !after.researchQueue) {
+            addToast('research', 'Recherche terminee', `${prevResearch.research} niv. ${prevResearch.targetLevel}`);
+          }
+
+          // Flotte arrivee (nombre de flottes diminue)
+          if (after.fleetMovements.length < prevFleets) {
+            addToast('fleet', 'Flotte arrivee', `Une de vos flottes a atteint sa destination`);
+          }
+        });
+
         // Charger les messages serveur
         apiLoadMessages().then((msgs) => {
           if (msgs.length > 0) {
+            const before = useGameStore.getState();
+            const addToast = useToastStore.getState().addToast;
+
+            // Detecter les nouveaux messages
+            const prevIds = new Set(before.messages.map((m) => m.id));
+            const newMsgs = msgs.filter((m) => !prevIds.has(m.id) && !m.read);
+
+            for (const msg of newMsgs) {
+              if (msg.type === 'combat') {
+                addToast('combat', msg.title, msg.body);
+              } else if (msg.type === 'espionage') {
+                addToast('info', msg.title, msg.body);
+              } else if (msg.type === 'colonization') {
+                addToast('info', msg.title, msg.body);
+              }
+            }
+
             useGameStore.setState({ messages: msgs });
           }
         });

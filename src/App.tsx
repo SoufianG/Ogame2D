@@ -14,6 +14,7 @@ import { Changelog } from './components/Changelog';
 import { Achievements } from './components/Achievements';
 import { TechTree } from './components/TechTree';
 import { Tutorial, TutorialButton } from './components/Tutorial';
+import { Toasts } from './components/Toasts';
 import { ResourceBar } from './components/ResourceBar';
 import { useResourceTick } from './hooks/useResourceTick';
 import { useAuth } from './hooks/useAuth';
@@ -119,6 +120,7 @@ function GameApp({ username, onLogout }: { username: string; onLogout: () => voi
         </div>
       </nav>
       <Tutorial />
+      <Toasts />
       <main className="game-content">
         <ResourceBar />
         <TutorialButton />

@@ -1,5 +1,17 @@
 const CHANGELOG = [
   {
+    version: '0.10.0',
+    date: '2026-04-06',
+    title: 'Notifications en jeu',
+    entries: [
+      { type: 'new' as const, text: 'Toasts de notification pour les evenements : construction, recherche, flotte, combat' },
+      { type: 'new' as const, text: 'Notifications automatiques a l\'arrivee de flottes et a la reception de messages' },
+      { type: 'new' as const, text: 'Rapports de combat et d\'espionnage signales par toast' },
+      { type: 'improve' as const, text: 'Detection des changements d\'etat entre les polls serveur' },
+      { type: 'improve' as const, text: 'Suppression du batiment Terraformeur (plus necessaire)' },
+    ],
+  },
+  {
     version: '0.9.0',
     date: '2026-04-06',
     title: 'Succes, Arbre Tech & Tutoriel',
