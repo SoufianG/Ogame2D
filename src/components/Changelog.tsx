@@ -1,5 +1,15 @@
 const CHANGELOG = [
   {
+    version: '0.10.1',
+    date: '2026-04-06',
+    title: 'Capacite de stockage visible',
+    entries: [
+      { type: 'new' as const, text: 'Affichage de la capacite max des entrepots dans la barre de ressources (metal / cristal / deuterium)' },
+      { type: 'new' as const, text: 'Jauge de remplissage sous chaque ressource' },
+      { type: 'new' as const, text: 'Indicateur rouge quand un entrepot est plein' },
+    ],
+  },
+  {
     version: '0.10.0',
     date: '2026-04-06',
     title: 'Notifications en jeu',
