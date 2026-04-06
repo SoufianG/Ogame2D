@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { apiGet, apiPost } from '../api/client';
+import { refreshGameState } from '../api/sync';
 import { formatNumber } from '../utils/format';
 
 interface Achievement {
@@ -46,6 +47,7 @@ export function Achievements() {
     try {
       await apiPost(`/achievements/claim/${id}`, {});
       setAchievements((prev) => prev.map((a) => a.id === id ? { ...a, claimed: true } : a));
+      await refreshGameState();
     } catch { /* ignore */ }
     setClaiming(null);
   };
