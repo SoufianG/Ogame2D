@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { useGameStore } from '../store/gameStore';
-import { DEFENSES_DATA, getUnitTime } from '../data/ships';
+import { DEFENSES_DATA, SHIPS_DATA, getUnitTime } from '../data/ships';
 import type { UnitData } from '../data/ships';
 import { checkPrerequisites, canAfford } from '../utils/prerequisites';
 import { formatNumber, formatTime } from '../utils/format';
+import { apiBuildUnit, apiCancelShipyardQueue } from '../api/sync';
 
 function DefenseCard({ data }: { data: UnitData }) {
   const [quantity, setQuantity] = useState(1);
+  const [loading, setLoading] = useState(false);
   const planet = useGameStore((s) => s.currentPlanet)();
   const research = useGameStore((s) => s.research);
 
@@ -21,7 +23,14 @@ function DefenseCard({ data }: { data: UnitData }) {
   const affordable = canAfford(totalCost, planet.resources);
   const unitTime = getUnitTime(data.cost, planet.buildings.shipyard);
   const locked = missing.length > 0;
-  const canBuild = !locked && affordable && quantity > 0;
+  const canBuild = !locked && affordable && quantity > 0 && !loading;
+
+  const handleBuild = async () => {
+    if (!canBuild) return;
+    setLoading(true);
+    await apiBuildUnit(planet.id, data.id, quantity);
+    setLoading(false);
+  };
 
   return (
     <div className={`building-card ${locked ? 'locked' : ''}`}>
@@ -80,11 +89,61 @@ function DefenseCard({ data }: { data: UnitData }) {
           <button
             className={`build-btn ${canBuild ? 'ready' : 'disabled'}`}
             disabled={!canBuild}
+            onClick={handleBuild}
           >
-            Construire x{quantity}
+            {loading ? 'En cours...' : `Construire x${quantity}`}
           </button>
         </div>
       )}
+    </div>
+  );
+}
+
+function DefenseQueue() {
+  const planet = useGameStore((s) => s.currentPlanet)();
+  const shipyardQueues = useGameStore((s) => s.shipyardQueues);
+
+  if (!planet) return null;
+
+  const queues = (shipyardQueues[planet.id] || []).filter((q) => q.unitCategory === 'defense');
+  if (queues.length === 0) return null;
+
+  const allUnits = { ...SHIPS_DATA, ...DEFENSES_DATA };
+
+  return (
+    <div className="building-category">
+      <h3 className="category-title">File de construction</h3>
+      <div className="shipyard-queue-list">
+        {queues.map((q) => {
+          const built = q.quantity - q.remaining;
+          const progress = q.unitTime > 0 ? (q.elapsed / q.unitTime) * 100 : 0;
+
+          return (
+            <div key={q.id} className="activity-item building">
+              <div className="activity-info">
+                <span className="activity-label">
+                  {allUnits[q.unitType as keyof typeof allUnits]?.name || q.unitType}
+                </span>
+                <span className="activity-detail">{built}/{q.quantity} construits</span>
+              </div>
+              <div className="activity-timer">
+                <div className="timer-bar">
+                  <div className="timer-fill" style={{ width: `${progress}%` }} />
+                </div>
+                <span className="timer-text">
+                  {formatTime(Math.max(0, q.unitTime - q.elapsed))} / unite
+                </span>
+              </div>
+              <button
+                className="build-btn cancel"
+                onClick={() => apiCancelShipyardQueue(planet.id, q.id)}
+              >
+                Annuler
+              </button>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -104,6 +163,8 @@ export function Defenses() {
           Chantier niv. {planet.buildings.shipyard}
         </span>
       </div>
+
+      <DefenseQueue />
 
       <div className="building-category">
         <h3 className="category-title">Defenses Planetaires</h3>

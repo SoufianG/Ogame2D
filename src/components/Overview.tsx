@@ -88,12 +88,18 @@ function MiniPlanetCard({ planet, isCurrent, onClick }: {
   onClick: () => void;
 }) {
   const coords = `[${planet.coordinates.galaxy}:${planet.coordinates.system}:${planet.coordinates.position}]`;
+  const { resources } = planet;
   return (
     <div className={`mini-planet-card ${isCurrent ? 'active' : ''}`} onClick={onClick}>
       <PlanetRenderer planet={planet} size={48} />
       <div className="mini-planet-info">
         <span className="mini-planet-name">{planet.name}</span>
         <span className="mini-planet-coords">{coords}</span>
+        <div className="mini-planet-resources">
+          <span className="mini-res"><img src="/assets/fer.png" alt="" className="mini-res-icon" />{formatNumber(resources.metal)}</span>
+          <span className="mini-res"><img src="/assets/cristal.png" alt="" className="mini-res-icon" />{formatNumber(resources.crystal)}</span>
+          <span className="mini-res"><img src="/assets/deuterium.png" alt="" className="mini-res-icon" />{formatNumber(resources.deuterium)}</span>
+        </div>
       </div>
     </div>
   );
@@ -119,46 +125,6 @@ export function Overview() {
 
   return (
     <div className="overview">
-      {/* Barre de ressources */}
-      <div className="resources-bar">
-        <div className="resource-item">
-          <img src="/assets/fer.png" alt="Metal" className="resource-img" />
-          <div className="resource-data">
-            <span className="resource-label">Metal</span>
-            <span className="resource-value">{formatNumber(resources.metal)}</span>
-            <span className="resource-sub">+{formatNumber(production.metalPerHour)}/h</span>
-          </div>
-        </div>
-        <div className="resource-item">
-          <img src="/assets/cristal.png" alt="Cristal" className="resource-img" />
-          <div className="resource-data">
-            <span className="resource-label">Cristal</span>
-            <span className="resource-value">{formatNumber(resources.crystal)}</span>
-            <span className="resource-sub">+{formatNumber(production.crystalPerHour)}/h</span>
-          </div>
-        </div>
-        <div className="resource-item">
-          <img src="/assets/deuterium.png" alt="Deuterium" className="resource-img" />
-          <div className="resource-data">
-            <span className="resource-label">Deuterium</span>
-            <span className="resource-value">{formatNumber(resources.deuterium)}</span>
-            <span className="resource-sub">+{formatNumber(production.deuteriumPerHour)}/h</span>
-          </div>
-        </div>
-        <div className="resource-item">
-          <div className="resource-icon energy">En</div>
-          <div className="resource-data">
-            <span className="resource-label">Energie</span>
-            <span className={`resource-value ${production.energyBalance >= 0 ? 'positive' : 'negative'}`}>
-              {production.energyBalance >= 0 ? '+' : ''}{formatNumber(production.energyBalance)}
-            </span>
-            <span className="resource-sub">
-              {formatNumber(production.energyProduction)} / {formatNumber(production.energyConsumption)}
-            </span>
-          </div>
-        </div>
-      </div>
-
       {/* Planete courante en grand */}
       <div className="planet-section">
         <div className="planet-view">
@@ -178,6 +144,29 @@ export function Overview() {
             <div className="stat-row">
               <span className="stat-label">Type</span>
               <span className="stat-value">{BIOME_LABELS[biome] ?? biome}</span>
+            </div>
+          </div>
+          <div className="planet-resources-inline">
+            <div className="res-inline">
+              <img src="/assets/fer.png" alt="" className="mini-res-icon" />
+              <span>{formatNumber(resources.metal)}</span>
+              <span className="resource-sub">+{formatNumber(production.metalPerHour)}/h</span>
+            </div>
+            <div className="res-inline">
+              <img src="/assets/cristal.png" alt="" className="mini-res-icon" />
+              <span>{formatNumber(resources.crystal)}</span>
+              <span className="resource-sub">+{formatNumber(production.crystalPerHour)}/h</span>
+            </div>
+            <div className="res-inline">
+              <img src="/assets/deuterium.png" alt="" className="mini-res-icon" />
+              <span>{formatNumber(resources.deuterium)}</span>
+              <span className="resource-sub">+{formatNumber(production.deuteriumPerHour)}/h</span>
+            </div>
+            <div className="res-inline">
+              <span className="resource-icon-sm energy">En</span>
+              <span className={production.energyBalance >= 0 ? 'positive' : 'negative'}>
+                {production.energyBalance >= 0 ? '+' : ''}{formatNumber(production.energyBalance)}
+              </span>
             </div>
           </div>
         </div>

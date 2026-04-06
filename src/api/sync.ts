@@ -3,9 +3,9 @@ import { useGameStore } from '../store/gameStore';
 import type { Planet } from '../types';
 import type { BuildingType } from '../types/building';
 import type { ResearchType } from '../types/research';
-import type { ShipType, MissionType } from '../types/fleet';
+import type { ShipType, DefenseType, MissionType } from '../types/fleet';
 import { getBiome } from '../types/planet';
-import type { BuildingQueueItem, ResearchQueueItem, GameMessage } from '../store/gameStore';
+import type { BuildingQueueItem, ResearchQueueItem, ShipyardQueueItem, GameMessage } from '../store/gameStore';
 
 // === Types de reponse serveur ===
 
@@ -42,6 +42,15 @@ interface ServerPlanet {
     targetLevel: number;
     remainingTime: number;
     totalTime: number;
+  }>;
+  shipyardQueues: Array<{
+    id: number;
+    unitType: string;
+    unitCategory: string;
+    quantity: number;
+    remaining: number;
+    unitTime: number;
+    elapsed: number;
   }>;
 }
 
@@ -106,6 +115,7 @@ export async function refreshGameState(): Promise<boolean> {
 
     // Construire les buildingQueues par planetId
     const buildingQueues: Record<string, BuildingQueueItem | null> = {};
+    const shipyardQueues: Record<string, ShipyardQueueItem[]> = {};
     for (const p of data.planets) {
       if (p.buildingQueues.length > 0) {
         const q = p.buildingQueues[0];
@@ -118,6 +128,15 @@ export async function refreshGameState(): Promise<boolean> {
       } else {
         buildingQueues[p.id] = null;
       }
+      shipyardQueues[p.id] = p.shipyardQueues.map((q) => ({
+        id: q.id,
+        unitType: q.unitType,
+        unitCategory: q.unitCategory as 'ship' | 'defense',
+        quantity: q.quantity,
+        remaining: q.remaining,
+        unitTime: q.unitTime,
+        elapsed: q.elapsed,
+      }));
     }
 
     // Research queue
@@ -152,6 +171,7 @@ export async function refreshGameState(): Promise<boolean> {
         : data.planets[0].id,
       research: { ...store.research, ...data.research } as Record<ResearchType, number>,
       buildingQueues,
+      shipyardQueues,
       researchQueue,
       fleetMovements,
     });
@@ -205,6 +225,28 @@ export async function apiCancelResearch(): Promise<boolean> {
     return true;
   } catch (err) {
     console.error('Cancel research failed:', err);
+    return false;
+  }
+}
+
+export async function apiBuildUnit(planetId: string, unitType: string, quantity: number): Promise<boolean> {
+  try {
+    await apiPost('/game/shipyard/build', { planetId, unitType, quantity });
+    await refreshGameState();
+    return true;
+  } catch (err) {
+    console.error('Build unit failed:', err);
+    return false;
+  }
+}
+
+export async function apiCancelShipyardQueue(planetId: string, queueId: number): Promise<boolean> {
+  try {
+    await apiPost('/game/shipyard/cancel', { planetId, queueId });
+    await refreshGameState();
+    return true;
+  } catch (err) {
+    console.error('Cancel shipyard queue failed:', err);
     return false;
   }
 }

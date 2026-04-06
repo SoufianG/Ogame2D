@@ -11,6 +11,7 @@ import { Auth } from './components/Auth';
 import { Alliance } from './components/Alliance';
 import { Rankings } from './components/Rankings';
 import { Changelog } from './components/Changelog';
+import { ResourceBar } from './components/ResourceBar';
 import { useResourceTick } from './hooks/useResourceTick';
 import { useAuth } from './hooks/useAuth';
 import { useSync } from './hooks/useSync';
@@ -113,6 +114,7 @@ function GameApp({ username, onLogout }: { username: string; onLogout: () => voi
         </div>
       </nav>
       <main className="game-content">
+        <ResourceBar />
         <Routes>
           <Route path="/" element={<Overview />} />
           <Route path="/buildings" element={<Buildings />} />

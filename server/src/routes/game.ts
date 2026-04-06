@@ -4,6 +4,7 @@ import { authMiddleware, type AuthRequest } from '../middleware/auth.js';
 import { computeProduction, computeStorage, getBuildingCost, getBuildingTime, getResearchTime } from '../engine/production.js';
 import { BUILDINGS } from '../data/buildings.js';
 import { RESEARCH } from '../data/research.js';
+import { ALL_UNITS, getUnitTime } from '../data/ships.js';
 
 const router = Router();
 router.use(authMiddleware);
@@ -34,6 +35,7 @@ interface PlanetRow {
 router.get('/state', (req: AuthRequest, res) => {
   const db = getDb();
   const userId = req.user!.userId;
+  const now = Math.floor(Date.now() / 1000);
 
   const planets = db.prepare(
     'SELECT * FROM planets WHERE user_id = ? ORDER BY galaxy, system, position',
@@ -59,6 +61,10 @@ router.get('/state', (req: AuthRequest, res) => {
       'SELECT * FROM building_queues WHERE planet_id = ? ORDER BY id',
     ).all(p.id) as Record<string, unknown>[];
 
+    const shipyardQueues = db.prepare(
+      'SELECT * FROM shipyard_queues WHERE planet_id = ? ORDER BY id',
+    ).all(p.id) as Record<string, unknown>[];
+
     return {
       id: p.id,
       name: p.name,
@@ -81,8 +87,17 @@ router.get('/state', (req: AuthRequest, res) => {
         id: q.id,
         building: q.building,
         targetLevel: q.target_level,
-        remainingTime: q.remaining_time,
+        remainingTime: Math.max(0, ((q.started_at as number) + (q.total_time as number)) - now),
         totalTime: q.total_time,
+      })),
+      shipyardQueues: shipyardQueues.map((q) => ({
+        id: q.id,
+        unitType: q.unit_type,
+        unitCategory: q.unit_category,
+        quantity: q.quantity,
+        remaining: q.remaining,
+        unitTime: q.unit_time,
+        elapsed: q.elapsed,
       })),
     };
   });
@@ -98,7 +113,7 @@ router.get('/state', (req: AuthRequest, res) => {
       planetId: researchQueue.planet_id,
       research: researchQueue.research,
       targetLevel: researchQueue.target_level,
-      remainingTime: researchQueue.remaining_time,
+      remainingTime: Math.max(0, ((researchQueue.started_at as number) + (researchQueue.total_time as number)) - now),
       totalTime: researchQueue.total_time,
     } : null,
     fleets: fleets.map((f) => ({
@@ -225,6 +240,124 @@ router.post('/build/cancel', (req: AuthRequest, res) => {
   }
 
   db.prepare('DELETE FROM building_queues WHERE id = ?').run(queue.id);
+  res.json({ ok: true });
+});
+
+// === SHIPYARD — Construire des vaisseaux ou defenses ===
+
+// POST /api/game/shipyard/build
+router.post('/shipyard/build', (req: AuthRequest, res) => {
+  const db = getDb();
+  const userId = req.user!.userId;
+  const { planetId, unitType, quantity } = req.body as { planetId: string; unitType: string; quantity: number };
+
+  if (!planetId || !unitType || !quantity || quantity < 1) {
+    res.status(400).json({ error: 'Parametres invalides' });
+    return;
+  }
+
+  const def = ALL_UNITS[unitType];
+  if (!def) {
+    res.status(400).json({ error: 'Unite inconnue' });
+    return;
+  }
+
+  const planet = db.prepare('SELECT * FROM planets WHERE id = ? AND user_id = ?').get(planetId, userId) as PlanetRow | undefined;
+  if (!planet) {
+    res.status(404).json({ error: 'Planete introuvable' });
+    return;
+  }
+
+  const buildings = JSON.parse(planet.buildings);
+  const shipyardLevel = buildings.shipyard || 0;
+
+  if (shipyardLevel < 1) {
+    res.status(400).json({ error: 'Chantier Naval requis' });
+    return;
+  }
+
+  // Verifier les prerequis
+  if (def.prerequisites.buildings) {
+    for (const [reqBuilding, reqLevel] of Object.entries(def.prerequisites.buildings)) {
+      if ((buildings[reqBuilding] || 0) < reqLevel) {
+        res.status(400).json({ error: `Prerequis: ${reqBuilding} niv. ${reqLevel}` });
+        return;
+      }
+    }
+  }
+  if (def.prerequisites.research) {
+    const researchRow = db.prepare('SELECT data FROM research WHERE user_id = ?').get(userId) as { data: string } | undefined;
+    const researchData = researchRow ? JSON.parse(researchRow.data) : {};
+    for (const [reqResearch, reqLevel] of Object.entries(def.prerequisites.research)) {
+      if ((researchData[reqResearch] || 0) < reqLevel) {
+        res.status(400).json({ error: `Prerequis: ${reqResearch} niv. ${reqLevel}` });
+        return;
+      }
+    }
+  }
+
+  // Cout total
+  const totalCost = {
+    metal: def.cost.metal * quantity,
+    crystal: def.cost.crystal * quantity,
+    deuterium: def.cost.deuterium * quantity,
+  };
+
+  if (planet.metal < totalCost.metal || planet.crystal < totalCost.crystal || planet.deuterium < totalCost.deuterium) {
+    res.status(400).json({ error: 'Ressources insuffisantes' });
+    return;
+  }
+
+  const unitTime = getUnitTime(def.cost, shipyardLevel);
+
+  // Deduire les ressources
+  db.prepare('UPDATE planets SET metal = metal - ?, crystal = crystal - ?, deuterium = deuterium - ? WHERE id = ?').run(
+    totalCost.metal, totalCost.crystal, totalCost.deuterium, planetId,
+  );
+
+  // Ajouter a la queue (on empile si une queue existe deja)
+  db.prepare(`
+    INSERT INTO shipyard_queues (planet_id, unit_type, unit_category, quantity, remaining, unit_time)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `).run(planetId, unitType, def.category, quantity, quantity, unitTime);
+
+  res.json({ ok: true, unitType, quantity, unitTime, totalCost });
+});
+
+// POST /api/game/shipyard/cancel
+router.post('/shipyard/cancel', (req: AuthRequest, res) => {
+  const db = getDb();
+  const userId = req.user!.userId;
+  const { planetId, queueId } = req.body as { planetId: string; queueId: number };
+
+  const queue = db.prepare(`
+    SELECT sq.* FROM shipyard_queues sq
+    JOIN planets p ON p.id = sq.planet_id
+    WHERE sq.id = ? AND sq.planet_id = ? AND p.user_id = ?
+  `).get(queueId, planetId, userId) as {
+    id: number; unit_type: string; unit_category: string;
+    remaining: number; unit_time: number;
+  } | undefined;
+
+  if (!queue) {
+    res.status(404).json({ error: 'Queue introuvable' });
+    return;
+  }
+
+  // Rembourser les unites restantes (pas celles deja construites)
+  const def = ALL_UNITS[queue.unit_type];
+  if (def) {
+    const refund = {
+      metal: def.cost.metal * queue.remaining,
+      crystal: def.cost.crystal * queue.remaining,
+      deuterium: def.cost.deuterium * queue.remaining,
+    };
+    db.prepare('UPDATE planets SET metal = metal + ?, crystal = crystal + ?, deuterium = deuterium + ? WHERE id = ?').run(
+      refund.metal, refund.crystal, refund.deuterium, planetId,
+    );
+  }
+
+  db.prepare('DELETE FROM shipyard_queues WHERE id = ?').run(queue.id);
   res.json({ ok: true });
 });
 

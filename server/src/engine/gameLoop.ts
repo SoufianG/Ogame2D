@@ -23,6 +23,7 @@ interface BuildingQueueRow {
   target_level: number;
   remaining_time: number;
   total_time: number;
+  started_at: number;
 }
 
 interface ResearchQueueRow {
@@ -31,6 +32,20 @@ interface ResearchQueueRow {
   research: string;
   target_level: number;
   remaining_time: number;
+  total_time: number;
+  started_at: number;
+}
+
+interface ShipyardQueueRow {
+  id: number;
+  planet_id: string;
+  unit_type: string;
+  unit_category: string;
+  quantity: number;
+  remaining: number;
+  unit_time: number;
+  elapsed: number;
+  started_at: number;
 }
 
 interface FleetRow {
@@ -53,6 +68,9 @@ interface FleetRow {
 export function startGameLoop() {
   if (tickTimer) return;
   console.log('Game loop started (every 5s)');
+  // Au demarrage, recalculer les remaining_time de toutes les queues
+  // pour rattraper le temps ecoule pendant l'arret du serveur
+  recalculateAllQueues();
   tickTimer = setInterval(gameTick, TICK_INTERVAL);
 }
 
@@ -63,21 +81,84 @@ export function stopGameLoop() {
   }
 }
 
+// Recalculer remaining_time a partir de started_at + total_time
+// Appele au demarrage du serveur pour rattraper le temps d'arret
+function recalculateAllQueues() {
+  const db = getDb();
+  const now = Math.floor(Date.now() / 1000);
+
+  // Buildings
+  db.prepare(`
+    UPDATE building_queues
+    SET remaining_time = MAX(0, (started_at + total_time) - ?)
+  `).run(now);
+
+  // Research
+  db.prepare(`
+    UPDATE research_queues
+    SET remaining_time = MAX(0, (started_at + total_time) - ?)
+  `).run(now);
+
+  // Shipyard: recalculer elapsed en fonction du temps ecoule
+  const shipQueues = db.prepare('SELECT * FROM shipyard_queues ORDER BY id').all() as ShipyardQueueRow[];
+  for (const q of shipQueues) {
+    const totalElapsed = now - q.started_at;
+    // Combien d'unites completees par le temps ecoule total
+    const unitsCompleted = Math.min(q.quantity, Math.floor(totalElapsed / q.unit_time));
+    const remaining = q.quantity - unitsCompleted;
+    const elapsed = totalElapsed - (unitsCompleted * q.unit_time);
+
+    if (remaining <= 0) {
+      // Toutes les unites sont terminees — les ajouter d'un coup
+      for (let i = 0; i < q.quantity - (q.quantity - q.remaining); i++) {
+        addUnitToPlanet(db, q.planet_id, q.unit_type, q.unit_category);
+      }
+      db.prepare('DELETE FROM shipyard_queues WHERE id = ?').run(q.id);
+    } else {
+      // Ajouter les unites completees depuis le dernier etat connu
+      const newlyCompleted = (q.quantity - q.remaining) < unitsCompleted
+        ? unitsCompleted - (q.quantity - q.remaining) : 0;
+      for (let i = 0; i < newlyCompleted; i++) {
+        addUnitToPlanet(db, q.planet_id, q.unit_type, q.unit_category);
+      }
+      db.prepare('UPDATE shipyard_queues SET remaining = ?, elapsed = ? WHERE id = ?').run(
+        remaining, Math.floor(elapsed), q.id,
+      );
+    }
+  }
+
+  // Completer les constructions et recherches terminees
+  const completedBuildings = db.prepare('SELECT * FROM building_queues WHERE remaining_time <= 0').all() as BuildingQueueRow[];
+  for (const q of completedBuildings) {
+    completeBuildingQueue(db, q);
+  }
+
+  const completedResearch = db.prepare('SELECT * FROM research_queues WHERE remaining_time <= 0').all() as ResearchQueueRow[];
+  for (const q of completedResearch) {
+    completeResearchQueue(db, q);
+  }
+
+  console.log(`Queues recalculated at startup (now=${now})`);
+}
+
 function gameTick() {
   const db = getDb();
-  const now = Math.floor(Date.now() / 1000); // unix seconds
+  const now = Math.floor(Date.now() / 1000);
 
   try {
     // === 1. Production de ressources ===
     tickProduction(db, TICK_INTERVAL / 1000);
 
-    // === 2. Files de construction ===
-    tickBuildingQueues(db, TICK_INTERVAL / 1000);
+    // === 2. Files de construction (basé sur timestamps absolus) ===
+    tickBuildingQueues(db, now);
 
-    // === 3. Files de recherche ===
-    tickResearchQueues(db, TICK_INTERVAL / 1000);
+    // === 3. Files de recherche (basé sur timestamps absolus) ===
+    tickResearchQueues(db, now);
 
-    // === 4. Flottes ===
+    // === 4. Files chantier naval ===
+    tickShipyardQueues(db, TICK_INTERVAL / 1000);
+
+    // === 5. Flottes ===
     tickFleets(db, now);
   } catch (err) {
     console.error('Game tick error:', err);
@@ -89,35 +170,21 @@ export function catchUp(userId: string) {
   const db = getDb();
   const now = Math.floor(Date.now() / 1000);
 
-  const planets = db.prepare('SELECT * FROM planets WHERE user_id = ?').all(userId) as PlanetRow[];
+  // D'abord, recalculer les remaining_time des queues de ce joueur
+  // basé sur started_at + total_time (timestamps absolus)
+  db.prepare(`
+    UPDATE building_queues
+    SET remaining_time = MAX(0, (started_at + total_time) - ?)
+    WHERE planet_id IN (SELECT id FROM planets WHERE user_id = ?)
+  `).run(now, userId);
 
-  for (const planet of planets) {
-    const buildings = JSON.parse(planet.buildings) as Buildings;
+  db.prepare(`
+    UPDATE research_queues
+    SET remaining_time = MAX(0, (started_at + total_time) - ?)
+    WHERE user_id = ?
+  `).run(now, userId);
 
-    // Calculer le temps ecoule depuis la derniere mise a jour
-    // On utilise last_login comme reference
-    const user = db.prepare('SELECT last_login FROM users WHERE id = ?').get(userId) as { last_login: number | null };
-    const lastActive = user?.last_login || now;
-    const elapsed = Math.max(0, now - lastActive);
-
-    if (elapsed < 10) continue; // Pas besoin de rattraper si < 10s
-
-    const rates = computeProduction(buildings, planet.temperature);
-    const metalStorage = computeStorage(buildings.metalStorage || 0);
-    const crystalStorage = computeStorage(buildings.crystalStorage || 0);
-    const deutStorage = computeStorage(buildings.deuteriumTank || 0);
-
-    const hoursElapsed = elapsed / 3600;
-    const newMetal = Math.min(metalStorage, planet.metal + rates.metalPerHour * hoursElapsed);
-    const newCrystal = Math.min(crystalStorage, planet.crystal + rates.crystalPerHour * hoursElapsed);
-    const newDeut = Math.min(deutStorage, planet.deuterium + rates.deuteriumPerHour * hoursElapsed);
-
-    db.prepare('UPDATE planets SET metal = ?, crystal = ?, deuterium = ? WHERE id = ?').run(
-      newMetal, newCrystal, newDeut, planet.id,
-    );
-  }
-
-  // Resoudre les constructions completees pendant l'absence
+  // Completer les constructions terminees
   const queues = db.prepare(`
     SELECT bq.* FROM building_queues bq
     JOIN planets p ON p.id = bq.planet_id
@@ -128,10 +195,40 @@ export function catchUp(userId: string) {
     completeBuildingQueue(db, q);
   }
 
-  // Resoudre les recherches completees
+  // Completer les recherches terminees
   const rq = db.prepare('SELECT * FROM research_queues WHERE user_id = ? AND remaining_time <= 0').get(userId) as ResearchQueueRow | undefined;
   if (rq) {
     completeResearchQueue(db, rq);
+  }
+
+  // Rattraper la production pour les planetes du joueur
+  const planets = db.prepare('SELECT * FROM planets WHERE user_id = ?').all(userId) as PlanetRow[];
+  const user = db.prepare('SELECT last_login FROM users WHERE id = ?').get(userId) as { last_login: number | null };
+  const lastActive = user?.last_login || now;
+  const elapsed = Math.max(0, now - lastActive);
+
+  if (elapsed < 10) return;
+
+  for (const planet of planets) {
+    // Re-lire les buildings au cas ou une construction vient d'etre completee
+    const freshPlanet = db.prepare('SELECT buildings, metal, crystal, deuterium FROM planets WHERE id = ?').get(planet.id) as {
+      buildings: string; metal: number; crystal: number; deuterium: number;
+    };
+    const buildings = JSON.parse(freshPlanet.buildings) as Buildings;
+
+    const rates = computeProduction(buildings, planet.temperature);
+    const metalStorage = computeStorage(buildings.metalStorage || 0);
+    const crystalStorage = computeStorage(buildings.crystalStorage || 0);
+    const deutStorage = computeStorage(buildings.deuteriumTank || 0);
+
+    const hoursElapsed = elapsed / 3600;
+    const newMetal = Math.min(metalStorage, freshPlanet.metal + rates.metalPerHour * hoursElapsed);
+    const newCrystal = Math.min(crystalStorage, freshPlanet.crystal + rates.crystalPerHour * hoursElapsed);
+    const newDeut = Math.min(deutStorage, freshPlanet.deuterium + rates.deuteriumPerHour * hoursElapsed);
+
+    db.prepare('UPDATE planets SET metal = ?, crystal = ?, deuterium = ? WHERE id = ?').run(
+      newMetal, newCrystal, newDeut, planet.id,
+    );
   }
 }
 
@@ -164,9 +261,12 @@ function tickProduction(db: ReturnType<typeof getDb>, deltaSeconds: number) {
 }
 
 // === Construction ===
-function tickBuildingQueues(db: ReturnType<typeof getDb>, deltaSeconds: number) {
-  // Decrementer le temps restant
-  db.prepare('UPDATE building_queues SET remaining_time = remaining_time - ?').run(deltaSeconds);
+function tickBuildingQueues(db: ReturnType<typeof getDb>, nowUnix: number) {
+  // Recalculer remaining_time a partir des timestamps absolus
+  db.prepare(`
+    UPDATE building_queues
+    SET remaining_time = MAX(0, (started_at + total_time) - ?)
+  `).run(nowUnix);
 
   // Recuperer les constructions terminees
   const completed = db.prepare('SELECT * FROM building_queues WHERE remaining_time <= 0').all() as BuildingQueueRow[];
@@ -191,8 +291,11 @@ function completeBuildingQueue(db: ReturnType<typeof getDb>, q: BuildingQueueRow
 }
 
 // === Recherche ===
-function tickResearchQueues(db: ReturnType<typeof getDb>, deltaSeconds: number) {
-  db.prepare('UPDATE research_queues SET remaining_time = remaining_time - ?').run(deltaSeconds);
+function tickResearchQueues(db: ReturnType<typeof getDb>, nowUnix: number) {
+  db.prepare(`
+    UPDATE research_queues
+    SET remaining_time = MAX(0, (started_at + total_time) - ?)
+  `).run(nowUnix);
 
   const completed = db.prepare('SELECT * FROM research_queues WHERE remaining_time <= 0').all() as ResearchQueueRow[];
 
@@ -215,9 +318,42 @@ function completeResearchQueue(db: ReturnType<typeof getDb>, q: ResearchQueueRow
   db.prepare('DELETE FROM research_queues WHERE user_id = ?').run(q.user_id);
 }
 
+// === Chantier Naval ===
+function tickShipyardQueues(db: ReturnType<typeof getDb>, deltaSeconds: number) {
+  const queues = db.prepare('SELECT * FROM shipyard_queues ORDER BY id').all() as ShipyardQueueRow[];
+
+  for (const q of queues) {
+    let remainingDelta = deltaSeconds + q.elapsed;
+    let remaining = q.remaining;
+
+    while (remaining > 0 && remainingDelta >= q.unit_time) {
+      remainingDelta -= q.unit_time;
+      remaining--;
+      addUnitToPlanet(db, q.planet_id, q.unit_type, q.unit_category);
+    }
+
+    if (remaining <= 0) {
+      db.prepare('DELETE FROM shipyard_queues WHERE id = ?').run(q.id);
+    } else {
+      db.prepare('UPDATE shipyard_queues SET remaining = ?, elapsed = ? WHERE id = ?').run(
+        remaining, remainingDelta, q.id,
+      );
+    }
+  }
+}
+
+function addUnitToPlanet(db: ReturnType<typeof getDb>, planetId: string, unitType: string, category: string) {
+  const field = category === 'ship' ? 'ships' : 'defenses';
+  const planet = db.prepare(`SELECT ${field} FROM planets WHERE id = ?`).get(planetId) as Record<string, string> | undefined;
+  if (!planet) return;
+
+  const units = JSON.parse(planet[field]) as Record<string, number>;
+  units[unitType] = (units[unitType] || 0) + 1;
+  db.prepare(`UPDATE planets SET ${field} = ? WHERE id = ?`).run(JSON.stringify(units), planetId);
+}
+
 // === Flottes ===
 function tickFleets(db: ReturnType<typeof getDb>, nowUnix: number) {
-  // Flottes arrivees a destination (pas encore resolues)
   const arrived = db.prepare(
     'SELECT * FROM fleet_movements WHERE arrival_time <= ? AND resolved = 0',
   ).all(nowUnix) as FleetRow[];
@@ -226,7 +362,6 @@ function tickFleets(db: ReturnType<typeof getDb>, nowUnix: number) {
     resolveFleetArrival(db, fleet, nowUnix);
   }
 
-  // Flottes de retour
   const returned = db.prepare(
     'SELECT * FROM fleet_movements WHERE return_time IS NOT NULL AND return_time <= ? AND resolved = 1',
   ).all(nowUnix) as FleetRow[];
@@ -238,18 +373,14 @@ function tickFleets(db: ReturnType<typeof getDb>, nowUnix: number) {
 
 function resolveFleetArrival(db: ReturnType<typeof getDb>, fleet: FleetRow, nowUnix: number) {
   const ships = JSON.parse(fleet.ships) as Record<string, number>;
-  const cargo = JSON.parse(fleet.cargo) as { metal: number; crystal: number; deuterium: number };
 
   if (fleet.mission === 'attack') {
-    // Combat simplifie contre NPC (pas de planete joueur ciblee pour l'instant)
-    // Le butin est genere aleatoirement
     const loot = {
       metal: Math.floor(Math.random() * 30000) + 5000,
       crystal: Math.floor(Math.random() * 15000) + 3000,
       deuterium: Math.floor(Math.random() * 8000) + 1000,
     };
 
-    // Pertes aleatoires (10-30% des vaisseaux)
     const lossRate = 0.1 + Math.random() * 0.2;
     const survivingShips: Record<string, number> = {};
     for (const [type, count] of Object.entries(ships)) {
@@ -257,12 +388,10 @@ function resolveFleetArrival(db: ReturnType<typeof getDb>, fleet: FleetRow, nowU
       survivingShips[type] = surviving;
     }
 
-    // Mettre a jour la flotte avec survivants et butin
     db.prepare('UPDATE fleet_movements SET ships = ?, cargo = ?, resolved = 1 WHERE id = ?').run(
       JSON.stringify(survivingShips), JSON.stringify(loot), fleet.id,
     );
 
-    // Message de combat
     const totalShips = Object.values(ships).reduce((a, b) => a + b, 0);
     const totalSurvivors = Object.values(survivingShips).reduce((a, b) => a + b, 0);
     db.prepare(`
@@ -276,7 +405,6 @@ function resolveFleetArrival(db: ReturnType<typeof getDb>, fleet: FleetRow, nowU
       nowUnix,
     );
   } else if (fleet.mission === 'espionage') {
-    // Rapport d'espionnage
     const resources = {
       metal: Math.floor(Math.random() * 100000) + 10000,
       crystal: Math.floor(Math.random() * 50000) + 5000,
@@ -297,7 +425,6 @@ function resolveFleetArrival(db: ReturnType<typeof getDb>, fleet: FleetRow, nowU
       nowUnix,
     );
   } else {
-    // Autres missions : marquer comme resolu
     db.prepare('UPDATE fleet_movements SET resolved = 1 WHERE id = ?').run(fleet.id);
   }
 }
@@ -306,7 +433,6 @@ function resolveFleetReturn(db: ReturnType<typeof getDb>, fleet: FleetRow) {
   const ships = JSON.parse(fleet.ships) as Record<string, number>;
   const cargo = JSON.parse(fleet.cargo) as { metal: number; crystal: number; deuterium: number };
 
-  // Trouver la planete d'origine
   const planet = db.prepare(
     'SELECT id, ships, metal, crystal, deuterium FROM planets WHERE galaxy = ? AND system = ? AND position = ? AND user_id = ?',
   ).get(fleet.origin_galaxy, fleet.origin_system, fleet.origin_position, fleet.user_id) as {
@@ -314,13 +440,11 @@ function resolveFleetReturn(db: ReturnType<typeof getDb>, fleet: FleetRow) {
   } | undefined;
 
   if (planet) {
-    // Rendre les vaisseaux
     const planetShips = JSON.parse(planet.ships) as Record<string, number>;
     for (const [type, count] of Object.entries(ships)) {
       planetShips[type] = (planetShips[type] || 0) + count;
     }
 
-    // Crediter le butin
     db.prepare('UPDATE planets SET ships = ?, metal = metal + ?, crystal = crystal + ?, deuterium = deuterium + ? WHERE id = ?').run(
       JSON.stringify(planetShips),
       cargo.metal || 0,
@@ -330,6 +454,5 @@ function resolveFleetReturn(db: ReturnType<typeof getDb>, fleet: FleetRow) {
     );
   }
 
-  // Supprimer le mouvement
   db.prepare('DELETE FROM fleet_movements WHERE id = ?').run(fleet.id);
 }

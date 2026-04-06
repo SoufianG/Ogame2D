@@ -31,10 +31,13 @@ export interface ResearchQueueItem {
 }
 
 export interface ShipyardQueueItem {
-  unitType: ShipType | DefenseType;
+  id: number;
+  unitType: string;
+  unitCategory: 'ship' | 'defense';
   quantity: number;
-  remainingTime: number;
-  totalTime: number;
+  remaining: number;
+  unitTime: number;   // secondes par unite
+  elapsed: number;    // secondes ecoulees sur l'unite en cours
 }
 
 // === Messages ===

@@ -72,6 +72,19 @@ CREATE TABLE IF NOT EXISTS research_queues (
   started_at INTEGER NOT NULL DEFAULT (unixepoch())
 );
 
+-- Files de construction vaisseaux/defenses (chantier naval)
+CREATE TABLE IF NOT EXISTS shipyard_queues (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  planet_id TEXT NOT NULL REFERENCES planets(id) ON DELETE CASCADE,
+  unit_type TEXT NOT NULL,         -- ex: 'lightFighter', 'rocketLauncher'
+  unit_category TEXT NOT NULL,     -- 'ship' ou 'defense'
+  quantity INTEGER NOT NULL,
+  remaining INTEGER NOT NULL,      -- nombre restant a construire
+  unit_time INTEGER NOT NULL,      -- temps par unite en secondes
+  elapsed INTEGER NOT NULL DEFAULT 0,  -- temps ecoule sur l'unite en cours
+  started_at INTEGER NOT NULL DEFAULT (unixepoch())
+);
+
 -- Mouvements de flotte
 CREATE TABLE IF NOT EXISTS fleet_movements (
   id TEXT PRIMARY KEY,
