@@ -1997,6 +1997,79 @@
   margin-bottom: 0.75rem;
 }
 
+.tutorial-header-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.tutorial-minimize {
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+  color: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  font-size: 0.75rem;
+  padding: 0.1rem 0.4rem;
+  line-height: 1;
+}
+
+.tutorial-minimize:hover {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.tutorial-minimized {
+  position: fixed;
+  bottom: 1rem;
+  right: 1rem;
+  z-index: 1000;
+  background: rgba(15, 23, 42, 0.92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(99, 179, 237, 0.3);
+  border-radius: 2rem;
+  padding: 0.4rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+.tutorial-minimized:hover {
+  background: rgba(15, 23, 42, 0.98);
+  border-color: rgba(99, 179, 237, 0.5);
+}
+
+.tutorial-minimized-step {
+  font-size: 0.7rem;
+  color: rgba(99, 179, 237, 0.8);
+  font-weight: 600;
+  background: rgba(99, 179, 237, 0.12);
+  padding: 0.15rem 0.4rem;
+  border-radius: 1rem;
+}
+
+.tutorial-minimized-title {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.tutorial-minimized-ready {
+  background: rgba(72, 187, 120, 0.3);
+  color: rgba(72, 187, 120, 0.9);
+  font-weight: 700;
+  font-size: 0.7rem;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .tutorial-reopen {
   position: fixed;
   bottom: 1rem;

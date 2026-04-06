@@ -87,7 +87,7 @@ function useTutorialSteps(): TutorialStep[] {
       title: 'Explorer la Galaxie',
       description: 'Allez voir qui sont vos voisins dans la vue Galaxie !',
       hint: 'Menu Galaxie',
-      check: () => true, // Auto-complete
+      check: () => true,
       navigateTo: '/galaxy',
     },
     {
@@ -111,24 +111,21 @@ function useTutorialSteps(): TutorialStep[] {
 export function Tutorial() {
   const [currentStep, setCurrentStep] = useState(0);
   const [completed, setCompleted] = useState(false);
+  const [minimized, setMinimized] = useState(false);
   const [loading, setLoading] = useState(true);
   const steps = useTutorialSteps();
 
-  // Charger la progression
   useEffect(() => {
     (async () => {
       try {
         const data = await apiGet<{ currentStep: number; completed: boolean }>('/achievements/tutorial');
         setCurrentStep(data.currentStep);
         setCompleted(data.completed);
-      } catch {
-        // Nouveau joueur, pas de progression
-      }
+      } catch { /* nouveau joueur */ }
       setLoading(false);
     })();
   }, []);
 
-  // Sauvegarder la progression
   const saveProgress = async (step: number, done: boolean) => {
     try {
       await apiPost('/achievements/tutorial', { currentStep: step, completed: done });
@@ -154,15 +151,28 @@ export function Tutorial() {
     saveProgress(steps.length - 1, true);
   };
 
-  if (loading || !step) return null;
-  if (completed) return null;
+  if (loading || !step || completed) return null;
+
+  // Mode reduit : juste une petite barre cliquable
+  if (minimized) {
+    return (
+      <div className="tutorial-minimized" onClick={() => setMinimized(false)}>
+        <span className="tutorial-minimized-step">{currentStep + 1}/{steps.length}</span>
+        <span className="tutorial-minimized-title">{step.title}</span>
+        {canAdvance && <span className="tutorial-minimized-ready">!</span>}
+      </div>
+    );
+  }
 
   return (
     <div className="tutorial-overlay">
       <div className="tutorial-card">
         <div className="tutorial-header">
           <span className="tutorial-step">Etape {currentStep + 1}/{steps.length}</span>
-          <button className="tutorial-skip" onClick={handleSkip}>Passer le tutoriel</button>
+          <div className="tutorial-header-actions">
+            <button className="tutorial-minimize" onClick={() => setMinimized(true)} title="Reduire">_</button>
+            <button className="tutorial-skip" onClick={handleSkip}>Passer</button>
+          </div>
         </div>
 
         <h3 className="tutorial-title">{step.title}</h3>
@@ -196,7 +206,6 @@ export function Tutorial() {
   );
 }
 
-// Petit bouton pour rouvrir le tutoriel
 export function TutorialButton() {
   const [completed, setCompleted] = useState(true);
 
