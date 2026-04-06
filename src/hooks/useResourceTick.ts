@@ -61,7 +61,6 @@ export function useResourceTick() {
         const prevQueues = { ...before.buildingQueues };
         const prevResearch = before.researchQueue;
         const prevFleets = before.fleetMovements.length;
-        const prevMsgCount = before.messages.length;
 
         refreshGameState().then(() => {
           const after = useGameStore.getState();
