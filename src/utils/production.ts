@@ -17,6 +17,9 @@ export interface ProductionInfo {
   efficiency: number; // 0-1, ratio si deficit d'energie
 }
 
+// Multiplicateur global de production (1.5 = +50%)
+const PRODUCTION_MULTIPLIER = 1.5;
+
 export function computeProduction(planet: Planet): ProductionInfo {
   const { buildings, temperature } = planet;
 
@@ -54,9 +57,9 @@ export function computeProduction(planet: Planet): ProductionInfo {
     : 1;
 
   return {
-    metalPerHour: Math.floor((baseMetal + metalProduction) * efficiency),
-    crystalPerHour: Math.floor((baseCrystal + crystalProduction) * efficiency),
-    deuteriumPerHour: Math.floor(deutProduction * efficiency),
+    metalPerHour: Math.floor((baseMetal + metalProduction) * efficiency * PRODUCTION_MULTIPLIER),
+    crystalPerHour: Math.floor((baseCrystal + crystalProduction) * efficiency * PRODUCTION_MULTIPLIER),
+    deuteriumPerHour: Math.floor(deutProduction * efficiency * PRODUCTION_MULTIPLIER),
     energyProduction,
     energyConsumption,
     energyBalance,

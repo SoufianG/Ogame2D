@@ -1744,6 +1744,95 @@
   color: rgba(255, 255, 255, 0.6);
 }
 
+.rank-coords {
+  font-size: 0.8rem;
+  color: rgba(99, 179, 237, 0.8);
+  white-space: nowrap;
+}
+
+.rank-alliance {
+  font-size: 0.8rem;
+  color: rgba(72, 187, 120, 0.8);
+}
+
+.rank-action-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+  color: rgba(255, 255, 255, 0.6);
+  padding: 0.15rem 0.5rem;
+  cursor: pointer;
+  font-size: 0.75rem;
+}
+
+.rank-action-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+}
+
+.selected-row {
+  background: rgba(99, 179, 237, 0.08) !important;
+}
+
+.player-actions {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 1rem;
+  padding: 1rem;
+  margin-top: 0.75rem;
+}
+
+.player-actions-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.9rem;
+}
+
+.player-actions-header .message-delete {
+  margin-left: auto;
+}
+
+.player-coords {
+  color: rgba(99, 179, 237, 0.8);
+  font-size: 0.85rem;
+}
+
+.player-alliance {
+  color: rgba(72, 187, 120, 0.8);
+  font-size: 0.85rem;
+}
+
+.player-actions-buttons {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.player-msg-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.player-msg-form input,
+.player-msg-form textarea {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  padding: 0.4rem 0.6rem;
+  color: #e2e8f0;
+  font-size: 0.85rem;
+  font-family: inherit;
+}
+
+.player-msg-form input:focus,
+.player-msg-form textarea:focus {
+  outline: none;
+  border-color: rgba(99, 179, 237, 0.5);
+}
+
 /* === Changelog === */
 .changelog-release {
   background: rgba(255, 255, 255, 0.03);

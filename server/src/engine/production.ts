@@ -19,6 +19,9 @@ export interface ProductionRates {
   efficiency: number;
 }
 
+// Multiplicateur global de production (1.5 = +50%)
+const PRODUCTION_MULTIPLIER = 1.5;
+
 export function computeProduction(buildings: Buildings, temperature: number): ProductionRates {
   const baseMetal = 30;
   const baseCrystal = 15;
@@ -51,9 +54,9 @@ export function computeProduction(buildings: Buildings, temperature: number): Pr
     : 1;
 
   return {
-    metalPerHour: Math.floor((baseMetal + metalProduction) * efficiency),
-    crystalPerHour: Math.floor((baseCrystal + crystalProduction) * efficiency),
-    deuteriumPerHour: Math.floor(deutProduction * efficiency),
+    metalPerHour: Math.floor((baseMetal + metalProduction) * efficiency * PRODUCTION_MULTIPLIER),
+    crystalPerHour: Math.floor((baseCrystal + crystalProduction) * efficiency * PRODUCTION_MULTIPLIER),
+    deuteriumPerHour: Math.floor(deutProduction * efficiency * PRODUCTION_MULTIPLIER),
     efficiency,
   };
 }

@@ -79,8 +79,24 @@ router.get('/', (_req: AuthRequest, res) => {
         updated_at = excluded.updated_at
     `).run(u.id, points.totalPoints, points.economyPoints, points.researchPoints, points.militaryPoints);
 
+    // Planete mere (premiere planete creee)
+    const homeworld = db.prepare(
+      'SELECT galaxy, system, position FROM planets WHERE user_id = ? ORDER BY created_at ASC LIMIT 1',
+    ).get(u.id) as { galaxy: number; system: number; position: number } | undefined;
+
+    // Alliance
+    const allianceRow = db.prepare(`
+      SELECT a.id, a.tag FROM alliance_members am
+      JOIN alliances a ON a.id = am.alliance_id
+      WHERE am.user_id = ?
+    `).get(u.id) as { id: string; tag: string } | undefined;
+
     return {
+      userId: u.id,
       username: u.username,
+      homeworld: homeworld ? `${homeworld.galaxy}:${homeworld.system}:${homeworld.position}` : null,
+      allianceTag: allianceRow?.tag || null,
+      allianceId: allianceRow?.id || null,
       ...points,
     };
   });

@@ -1,10 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
-import { apiGet } from '../api/client';
+import { apiGet, apiPost } from '../api/client';
 import { formatNumber } from '../utils/format';
 
 interface RankEntry {
   rank: number;
+  userId: string;
   username: string;
+  homeworld: string | null;
+  allianceTag: string | null;
+  allianceId: string | null;
   totalPoints: number;
   total_points?: number;
   economyPoints: number;
@@ -24,10 +28,98 @@ const CATEGORY_LABELS: Record<Category, string> = {
   military: 'Militaire',
 };
 
+function PlayerActions({ player, onClose }: { player: RankEntry; onClose: () => void }) {
+  const [msgForm, setMsgForm] = useState({ subject: '', body: '' });
+  const [sending, setSending] = useState(false);
+  const [feedback, setFeedback] = useState<string | null>(null);
+
+  const handleSendMessage = async () => {
+    setSending(true);
+    setFeedback(null);
+    try {
+      await apiPost('/social/send', { toUsername: player.username, ...msgForm });
+      setFeedback('Message envoye !');
+      setMsgForm({ subject: '', body: '' });
+    } catch (err) {
+      setFeedback((err as Error).message);
+    }
+    setSending(false);
+  };
+
+  const handleInvite = async (allianceId: string) => {
+    // On envoie un message d'invitation avec le lien de l'alliance
+    try {
+      await apiPost('/social/send', {
+        toUsername: player.username,
+        subject: 'Invitation alliance',
+        body: `Tu es invite a rejoindre notre alliance ! Rendez-vous dans l'onglet Alliance pour nous rejoindre.`,
+      });
+      setFeedback('Invitation envoyee par message !');
+    } catch (err) {
+      setFeedback((err as Error).message);
+    }
+  };
+
+  return (
+    <div className="player-actions">
+      <div className="player-actions-header">
+        <strong>{player.username}</strong>
+        {player.homeworld && (
+          <span className="player-coords">[{player.homeworld}]</span>
+        )}
+        {player.allianceTag && (
+          <span className="player-alliance">[{player.allianceTag}]</span>
+        )}
+        <button className="message-delete" onClick={onClose}>x</button>
+      </div>
+
+      {feedback && (
+        <div className="report-winner attacker" style={{ marginBottom: '0.5rem', fontSize: '0.8rem' }}>
+          {feedback}
+        </div>
+      )}
+
+      <div className="player-actions-buttons">
+        <button
+          className="build-btn"
+          onClick={handleInvite.bind(null, '')}
+          title="Envoyer une invitation a rejoindre votre alliance"
+        >
+          Inviter en alliance
+        </button>
+      </div>
+
+      <div className="player-msg-form">
+        <input
+          placeholder="Sujet"
+          value={msgForm.subject}
+          onChange={(e) => setMsgForm((f) => ({ ...f, subject: e.target.value }))}
+          maxLength={100}
+        />
+        <textarea
+          placeholder="Message..."
+          value={msgForm.body}
+          onChange={(e) => setMsgForm((f) => ({ ...f, body: e.target.value }))}
+          rows={3}
+          maxLength={2000}
+        />
+        <button
+          className="build-btn ready"
+          onClick={handleSendMessage}
+          disabled={sending || !msgForm.subject || !msgForm.body}
+        >
+          {sending ? 'Envoi...' : 'Envoyer message'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function Rankings() {
   const [category, setCategory] = useState<Category>('total');
   const [rankings, setRankings] = useState<RankEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedPlayer, setSelectedPlayer] = useState<RankEntry | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -94,6 +186,8 @@ export function Rankings() {
               <tr>
                 <th>#</th>
                 <th>Joueur</th>
+                <th>Planete</th>
+                <th>Alliance</th>
                 <th>{CATEGORY_LABELS[category]}</th>
                 {category === 'total' && (
                   <>
@@ -102,13 +196,16 @@ export function Rankings() {
                     <th>Mil</th>
                   </>
                 )}
+                <th></th>
               </tr>
             </thead>
             <tbody>
               {sorted.map((r, i) => (
-                <tr key={r.username}>
+                <tr key={r.username} className={selectedPlayer?.username === r.username ? 'selected-row' : ''}>
                   <td className="rank-number">{i + 1}</td>
                   <td>{r.username}</td>
+                  <td className="rank-coords">{r.homeworld ? `[${r.homeworld}]` : '-'}</td>
+                  <td className="rank-alliance">{r.allianceTag ? `[${r.allianceTag}]` : '-'}</td>
                   <td>{formatNumber(getPoints(r))}</td>
                   {category === 'total' && (
                     <>
@@ -117,11 +214,27 @@ export function Rankings() {
                       <td>{formatNumber(r.militaryPoints)}</td>
                     </>
                   )}
+                  <td>
+                    <button
+                      className="rank-action-btn"
+                      onClick={() => setSelectedPlayer(selectedPlayer?.username === r.username ? null : r)}
+                      title="Actions"
+                    >
+                      ...
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+      )}
+
+      {selectedPlayer && (
+        <PlayerActions
+          player={selectedPlayer}
+          onClose={() => setSelectedPlayer(null)}
+        />
       )}
     </div>
   );
