@@ -1,5 +1,6 @@
 import { getDb } from '../db/database.js';
 import { computeProduction, computeStorage, type Buildings } from './production.js';
+import { simulateCombat } from './combat.js';
 
 const TICK_INTERVAL = 5000; // 5 secondes
 let tickTimer: ReturnType<typeof setInterval> | null = null;
@@ -371,62 +372,372 @@ function tickFleets(db: ReturnType<typeof getDb>, nowUnix: number) {
   }
 }
 
+function getTargetPlanet(db: ReturnType<typeof getDb>, fleet: FleetRow) {
+  return db.prepare(
+    'SELECT * FROM planets WHERE galaxy = ? AND system = ? AND position = ?',
+  ).get(fleet.dest_galaxy, fleet.dest_system, fleet.dest_position) as {
+    id: string; user_id: string; name: string;
+    metal: number; crystal: number; deuterium: number;
+    buildings: string; ships: string; defenses: string; temperature: number;
+    galaxy: number; system: number; position: number;
+  } | undefined;
+}
+
+function getResearchData(db: ReturnType<typeof getDb>, userId: string): Record<string, number> {
+  const row = db.prepare('SELECT data FROM research WHERE user_id = ?').get(userId) as { data: string } | undefined;
+  return row ? JSON.parse(row.data) : {};
+}
+
+function msgId(nowUnix: number): string {
+  return `msg-${nowUnix}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
 function resolveFleetArrival(db: ReturnType<typeof getDb>, fleet: FleetRow, nowUnix: number) {
   const ships = JSON.parse(fleet.ships) as Record<string, number>;
 
   if (fleet.mission === 'attack') {
-    const loot = {
-      metal: Math.floor(Math.random() * 30000) + 5000,
-      crystal: Math.floor(Math.random() * 15000) + 3000,
-      deuterium: Math.floor(Math.random() * 8000) + 1000,
-    };
-
-    const lossRate = 0.1 + Math.random() * 0.2;
-    const survivingShips: Record<string, number> = {};
-    for (const [type, count] of Object.entries(ships)) {
-      const surviving = Math.max(1, Math.floor(count * (1 - lossRate)));
-      survivingShips[type] = surviving;
-    }
-
-    db.prepare('UPDATE fleet_movements SET ships = ?, cargo = ?, resolved = 1 WHERE id = ?').run(
-      JSON.stringify(survivingShips), JSON.stringify(loot), fleet.id,
-    );
-
-    const totalShips = Object.values(ships).reduce((a, b) => a + b, 0);
-    const totalSurvivors = Object.values(survivingShips).reduce((a, b) => a + b, 0);
-    db.prepare(`
-      INSERT INTO messages (id, user_id, type, title, body, created_at)
-      VALUES (?, ?, 'combat', ?, ?, ?)
-    `).run(
-      `msg-${nowUnix}-${Math.random().toString(36).slice(2, 8)}`,
-      fleet.user_id,
-      `Combat [${fleet.dest_galaxy}:${fleet.dest_system}:${fleet.dest_position}]`,
-      `Victoire ! ${totalSurvivors}/${totalShips} vaisseaux survivants. Butin: ${loot.metal} Fe, ${loot.crystal} Cr, ${loot.deuterium} De`,
-      nowUnix,
-    );
+    resolveAttack(db, fleet, ships, nowUnix);
   } else if (fleet.mission === 'espionage') {
-    const resources = {
-      metal: Math.floor(Math.random() * 100000) + 10000,
-      crystal: Math.floor(Math.random() * 50000) + 5000,
-      deuterium: Math.floor(Math.random() * 20000) + 2000,
-    };
-
+    resolveEspionage(db, fleet, ships, nowUnix);
+  } else if (fleet.mission === 'colonize') {
+    resolveColonize(db, fleet, ships, nowUnix);
+  } else if (fleet.mission === 'transport') {
+    resolveTransport(db, fleet, ships, nowUnix);
+  } else if (fleet.mission === 'recycle') {
+    resolveRecycle(db, fleet, ships, nowUnix);
+  } else {
+    // deploy ou autre
     db.prepare('UPDATE fleet_movements SET resolved = 1 WHERE id = ?').run(fleet.id);
+  }
+}
 
+// === ATTAQUE ===
+function resolveAttack(db: ReturnType<typeof getDb>, fleet: FleetRow, ships: Record<string, number>, nowUnix: number) {
+  const target = getTargetPlanet(db, fleet);
+
+  if (!target) {
+    // Pas de planete a cette position — retour a vide
+    db.prepare('UPDATE fleet_movements SET resolved = 1 WHERE id = ?').run(fleet.id);
+    db.prepare('INSERT INTO messages (id, user_id, type, title, body, created_at) VALUES (?, ?, ?, ?, ?, ?)').run(
+      msgId(nowUnix), fleet.user_id, 'system', 'Attaque echouee',
+      `Aucune planete en [${fleet.dest_galaxy}:${fleet.dest_system}:${fleet.dest_position}].`, nowUnix,
+    );
+    return;
+  }
+
+  const attackerResearch = getResearchData(db, fleet.user_id);
+  const defenderResearch = getResearchData(db, target.user_id);
+  const targetShips = JSON.parse(target.ships) as Record<string, number>;
+  const targetDefenses = JSON.parse(target.defenses) as Record<string, number>;
+
+  const result = simulateCombat({
+    attacker: {
+      ships,
+      weaponTech: attackerResearch.weaponsTech || 0,
+      shieldTech: attackerResearch.shieldingTech || 0,
+      armourTech: attackerResearch.armourTech || 0,
+    },
+    defender: {
+      ships: targetShips,
+      defenses: targetDefenses,
+      weaponTech: defenderResearch.weaponsTech || 0,
+      shieldTech: defenderResearch.shieldingTech || 0,
+      armourTech: defenderResearch.armourTech || 0,
+      resources: { metal: target.metal, crystal: target.crystal, deuterium: target.deuterium },
+    },
+  });
+
+  // Mettre a jour la flotte attaquante (survivants + butin)
+  db.prepare('UPDATE fleet_movements SET ships = ?, cargo = ?, resolved = 1 WHERE id = ?').run(
+    JSON.stringify(result.attackerSurvivors), JSON.stringify(result.loot), fleet.id,
+  );
+
+  // Mettre a jour la planete cible (vaisseaux survivants, defenses survivantes, ressources pillees)
+  // Les defenses sont reconstruites a 70% apres le combat (regle OGame)
+  const newDefenses: Record<string, number> = {};
+  for (const [type, count] of Object.entries(targetDefenses)) {
+    const lost = result.defenderLosses[type] || 0;
+    const survived = count - lost;
+    const rebuilt = Math.floor(lost * 0.7);
+    newDefenses[type] = survived + rebuilt;
+    if (newDefenses[type] <= 0) delete newDefenses[type];
+  }
+
+  const newTargetShips: Record<string, number> = {};
+  for (const [type, count] of Object.entries(targetShips)) {
+    const survived = (result.defenderSurvivors[type] || 0);
+    if (survived > 0) newTargetShips[type] = survived;
+  }
+
+  db.prepare('UPDATE planets SET ships = ?, defenses = ?, metal = metal - ?, crystal = crystal - ?, deuterium = deuterium - ? WHERE id = ?').run(
+    JSON.stringify(newTargetShips),
+    JSON.stringify(newDefenses),
+    result.loot.metal, result.loot.crystal, result.loot.deuterium,
+    target.id,
+  );
+
+  // Debris
+  if (result.debris.metal > 0 || result.debris.crystal > 0) {
     db.prepare(`
-      INSERT INTO messages (id, user_id, type, title, body, data, created_at)
-      VALUES (?, ?, 'espionage', ?, ?, ?, ?)
+      INSERT INTO debris_fields (galaxy, system, position, metal, crystal)
+      VALUES (?, ?, ?, ?, ?)
+      ON CONFLICT(galaxy, system, position) DO UPDATE SET metal = metal + ?, crystal = crystal + ?
     `).run(
-      `msg-${nowUnix}-${Math.random().toString(36).slice(2, 8)}`,
-      fleet.user_id,
-      `Espionnage [${fleet.dest_galaxy}:${fleet.dest_system}:${fleet.dest_position}]`,
-      `Ressources detectees: ${resources.metal} Fe, ${resources.crystal} Cr, ${resources.deuterium} De`,
-      JSON.stringify({ espionageReport: { resources, coordinates: { galaxy: fleet.dest_galaxy, system: fleet.dest_system, position: fleet.dest_position } } }),
-      nowUnix,
+      fleet.dest_galaxy, fleet.dest_system, fleet.dest_position,
+      result.debris.metal, result.debris.crystal,
+      result.debris.metal, result.debris.crystal,
+    );
+  }
+
+  // Chance de lune
+  if (result.moonChance > 0 && Math.random() * 100 < result.moonChance) {
+    const existingMoon = db.prepare('SELECT id FROM moons WHERE planet_id = ?').get(target.id);
+    if (!existingMoon) {
+      db.prepare('INSERT INTO moons (id, planet_id, name, size) VALUES (?, ?, ?, ?)').run(
+        `moon-${nowUnix}-${Math.random().toString(36).slice(2, 8)}`,
+        target.id, `Lune de ${target.name}`, Math.floor(Math.random() * 5) + 3,
+      );
+    }
+  }
+
+  // Messages aux deux camps
+  const winnerLabel = result.winner === 'attacker' ? 'Attaquant' : result.winner === 'defender' ? 'Defenseur' : 'Match nul';
+  const combatData = JSON.stringify({ combatResult: result });
+  const coords = `[${fleet.dest_galaxy}:${fleet.dest_system}:${fleet.dest_position}]`;
+
+  // Message attaquant
+  db.prepare('INSERT INTO messages (id, user_id, type, title, body, data, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)').run(
+    msgId(nowUnix), fleet.user_id, 'combat',
+    `Combat ${coords}`,
+    `Vainqueur: ${winnerLabel}. Butin: ${result.loot.metal} Fe, ${result.loot.crystal} Cr, ${result.loot.deuterium} De.`,
+    combatData, nowUnix,
+  );
+
+  // Message defenseur
+  if (target.user_id !== fleet.user_id) {
+    const attackerName = db.prepare('SELECT username FROM users WHERE id = ?').get(fleet.user_id) as { username: string } | undefined;
+    db.prepare('INSERT INTO messages (id, user_id, type, title, body, data, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)').run(
+      msgId(nowUnix), target.user_id, 'combat',
+      `Attaque sur ${target.name} ${coords}`,
+      `Attaque de ${attackerName?.username || 'Inconnu'}. Vainqueur: ${winnerLabel}.`,
+      combatData, nowUnix,
+    );
+  }
+}
+
+// === ESPIONNAGE ===
+function resolveEspionage(db: ReturnType<typeof getDb>, fleet: FleetRow, ships: Record<string, number>, nowUnix: number) {
+  const target = getTargetPlanet(db, fleet);
+  db.prepare('UPDATE fleet_movements SET resolved = 1 WHERE id = ?').run(fleet.id);
+
+  if (!target) {
+    db.prepare('INSERT INTO messages (id, user_id, type, title, body, created_at) VALUES (?, ?, ?, ?, ?, ?)').run(
+      msgId(nowUnix), fleet.user_id, 'system', 'Espionnage echoue',
+      `Aucune planete en [${fleet.dest_galaxy}:${fleet.dest_system}:${fleet.dest_position}].`, nowUnix,
+    );
+    return;
+  }
+
+  const attackerResearch = getResearchData(db, fleet.user_id);
+  const defenderResearch = getResearchData(db, target.user_id);
+
+  const spyLevel = attackerResearch.espionageTech || 0;
+  const counterSpy = defenderResearch.espionageTech || 0;
+  const probeCount = ships.espionageProbe || 1;
+
+  // Visibilite progressive : base = spyLevel * probeCount^0.5 - counterSpy
+  const visibility = spyLevel * Math.sqrt(probeCount) - counterSpy;
+
+  // Toujours voir les ressources
+  const report: Record<string, unknown> = {
+    planetName: target.name,
+    coordinates: { galaxy: target.galaxy, system: target.system, position: target.position },
+    resources: { metal: Math.floor(target.metal), crystal: Math.floor(target.crystal), deuterium: Math.floor(target.deuterium) },
+  };
+
+  // Niv 2+ : voir la flotte
+  if (visibility >= 2) {
+    report.ships = JSON.parse(target.ships);
+  }
+
+  // Niv 4+ : voir les defenses
+  if (visibility >= 4) {
+    report.defenses = JSON.parse(target.defenses);
+  }
+
+  // Niv 6+ : voir les batiments
+  if (visibility >= 6) {
+    report.buildings = JSON.parse(target.buildings);
+  }
+
+  // Niv 8+ : voir les recherches
+  if (visibility >= 8) {
+    report.research = defenderResearch;
+  }
+
+  // Chance de perte des sondes : 2% par niveau de contre-espionnage
+  const lossChance = counterSpy * 0.02;
+  let probesLost = false;
+  if (Math.random() < lossChance) {
+    probesLost = true;
+    // Les sondes sont perdues — ne pas les renvoyer
+    db.prepare('UPDATE fleet_movements SET ships = ? WHERE id = ?').run(
+      JSON.stringify({}), fleet.id,
+    );
+  }
+
+  // Message attaquant
+  db.prepare('INSERT INTO messages (id, user_id, type, title, body, data, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)').run(
+    msgId(nowUnix), fleet.user_id, 'espionage',
+    `Espionnage [${fleet.dest_galaxy}:${fleet.dest_system}:${fleet.dest_position}]`,
+    probesLost ? 'Sondes detectees et detruites !' : `Rapport d'espionnage de ${target.name}`,
+    JSON.stringify({ espionageReport: report }), nowUnix,
+  );
+
+  // Message defenseur (alerte d'espionnage)
+  if (target.user_id !== fleet.user_id) {
+    const attackerName = db.prepare('SELECT username FROM users WHERE id = ?').get(fleet.user_id) as { username: string } | undefined;
+    db.prepare('INSERT INTO messages (id, user_id, type, title, body, created_at) VALUES (?, ?, ?, ?, ?, ?)').run(
+      msgId(nowUnix), target.user_id, 'espionage',
+      `Activite d'espionnage detectee`,
+      `${attackerName?.username || 'Inconnu'} a espionne ${target.name}.`, nowUnix,
+    );
+  }
+}
+
+// === COLONISATION ===
+function resolveColonize(db: ReturnType<typeof getDb>, fleet: FleetRow, ships: Record<string, number>, nowUnix: number) {
+  // Verifier qu'il n'y a pas deja une planete a cette position
+  const existing = db.prepare('SELECT id FROM planets WHERE galaxy = ? AND system = ? AND position = ?').get(
+    fleet.dest_galaxy, fleet.dest_system, fleet.dest_position,
+  );
+
+  if (existing) {
+    db.prepare('UPDATE fleet_movements SET resolved = 1 WHERE id = ?').run(fleet.id);
+    db.prepare('INSERT INTO messages (id, user_id, type, title, body, created_at) VALUES (?, ?, ?, ?, ?, ?)').run(
+      msgId(nowUnix), fleet.user_id, 'system', 'Colonisation echouee',
+      `Position [${fleet.dest_galaxy}:${fleet.dest_system}:${fleet.dest_position}] deja occupee.`, nowUnix,
+    );
+    return;
+  }
+
+  // Temperature selon la position
+  const temp = Math.floor(140 - (fleet.dest_position / 15) * 240 + (Math.random() - 0.5) * 30);
+  const biomes = ['glacial', 'tundra', 'temperate', 'arid', 'volcanic'];
+  const biome = temp > 80 ? 'volcanic' : temp > 40 ? 'arid' : temp > 0 ? 'temperate' : temp > -40 ? 'tundra' : 'glacial';
+  const size = Math.floor(Math.random() * 9) + 4;
+  const planetId = `planet-${nowUnix}-${Math.random().toString(36).slice(2, 8)}`;
+
+  db.prepare(`
+    INSERT INTO planets (id, user_id, name, galaxy, system, position, size, temperature, biome, aquaticity, metal, crystal, deuterium, buildings, ships, defenses)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 500, 500, 0, '{}', '{}', '{}')
+  `).run(
+    planetId, fleet.user_id, `Colonie`, fleet.dest_galaxy, fleet.dest_system, fleet.dest_position,
+    size, temp, biome, Math.random() * 0.7 + 0.05,
+  );
+
+  // Retirer le vaisseau de colonisation des survivants
+  const newShips = { ...ships };
+  if (newShips.colonyShip) {
+    newShips.colonyShip--;
+    if (newShips.colonyShip <= 0) delete newShips.colonyShip;
+  }
+
+  // Les autres vaisseaux rentrent
+  const hasShipsLeft = Object.values(newShips).some((c) => c > 0);
+  if (hasShipsLeft) {
+    db.prepare('UPDATE fleet_movements SET ships = ?, resolved = 1 WHERE id = ?').run(
+      JSON.stringify(newShips), fleet.id,
+    );
+  } else {
+    // Plus de vaisseaux, supprimer le mouvement directement
+    db.prepare('DELETE FROM fleet_movements WHERE id = ?').run(fleet.id);
+  }
+
+  db.prepare('INSERT INTO messages (id, user_id, type, title, body, created_at) VALUES (?, ?, ?, ?, ?, ?)').run(
+    msgId(nowUnix), fleet.user_id, 'colonization',
+    `Nouvelle colonie !`,
+    `Planete colonisee en [${fleet.dest_galaxy}:${fleet.dest_system}:${fleet.dest_position}].`, nowUnix,
+  );
+}
+
+// === TRANSPORT ===
+function resolveTransport(db: ReturnType<typeof getDb>, fleet: FleetRow, _ships: Record<string, number>, nowUnix: number) {
+  const target = getTargetPlanet(db, fleet);
+  const cargo = JSON.parse(fleet.cargo) as { metal: number; crystal: number; deuterium: number };
+
+  if (target && (cargo.metal > 0 || cargo.crystal > 0 || cargo.deuterium > 0)) {
+    db.prepare('UPDATE planets SET metal = metal + ?, crystal = crystal + ?, deuterium = deuterium + ? WHERE id = ?').run(
+      cargo.metal, cargo.crystal, cargo.deuterium, target.id,
+    );
+    // Vider le cargo pour le retour
+    db.prepare('UPDATE fleet_movements SET cargo = ?, resolved = 1 WHERE id = ?').run(
+      JSON.stringify({ metal: 0, crystal: 0, deuterium: 0 }), fleet.id,
     );
   } else {
     db.prepare('UPDATE fleet_movements SET resolved = 1 WHERE id = ?').run(fleet.id);
   }
+
+  db.prepare('INSERT INTO messages (id, user_id, type, title, body, created_at) VALUES (?, ?, ?, ?, ?, ?)').run(
+    msgId(nowUnix), fleet.user_id, 'transport',
+    `Transport livre`,
+    `Ressources livrees en [${fleet.dest_galaxy}:${fleet.dest_system}:${fleet.dest_position}]: ${cargo.metal} Fe, ${cargo.crystal} Cr, ${cargo.deuterium} De.`, nowUnix,
+  );
+}
+
+// === RECYCLAGE ===
+function resolveRecycle(db: ReturnType<typeof getDb>, fleet: FleetRow, ships: Record<string, number>, nowUnix: number) {
+  const debris = db.prepare('SELECT * FROM debris_fields WHERE galaxy = ? AND system = ? AND position = ?').get(
+    fleet.dest_galaxy, fleet.dest_system, fleet.dest_position,
+  ) as { metal: number; crystal: number } | undefined;
+
+  if (!debris || (debris.metal <= 0 && debris.crystal <= 0)) {
+    db.prepare('UPDATE fleet_movements SET resolved = 1 WHERE id = ?').run(fleet.id);
+    db.prepare('INSERT INTO messages (id, user_id, type, title, body, created_at) VALUES (?, ?, ?, ?, ?, ?)').run(
+      msgId(nowUnix), fleet.user_id, 'system', 'Recyclage',
+      `Aucun debris en [${fleet.dest_galaxy}:${fleet.dest_system}:${fleet.dest_position}].`, nowUnix,
+    );
+    return;
+  }
+
+  // Capacite de cargo des recycleurs
+  const recyclerCount = ships.recycler || 0;
+  const totalCargo = recyclerCount * 20000;
+
+  const collected = {
+    metal: Math.min(debris.metal, totalCargo / 2),
+    crystal: Math.min(debris.crystal, totalCargo / 2),
+  };
+  // Ajuster si un type a moins que sa moitie — redistribuer
+  const metalLeft = totalCargo - collected.metal;
+  collected.crystal = Math.min(debris.crystal, metalLeft);
+  const crystalLeft = totalCargo - collected.crystal;
+  collected.metal = Math.min(debris.metal, crystalLeft);
+
+  // Retirer des debris
+  const remainingMetal = debris.metal - collected.metal;
+  const remainingCrystal = debris.crystal - collected.crystal;
+
+  if (remainingMetal <= 0 && remainingCrystal <= 0) {
+    db.prepare('DELETE FROM debris_fields WHERE galaxy = ? AND system = ? AND position = ?').run(
+      fleet.dest_galaxy, fleet.dest_system, fleet.dest_position,
+    );
+  } else {
+    db.prepare('UPDATE debris_fields SET metal = ?, crystal = ? WHERE galaxy = ? AND system = ? AND position = ?').run(
+      remainingMetal, remainingCrystal, fleet.dest_galaxy, fleet.dest_system, fleet.dest_position,
+    );
+  }
+
+  // Charger dans le cargo de la flotte
+  db.prepare('UPDATE fleet_movements SET cargo = ?, resolved = 1 WHERE id = ?').run(
+    JSON.stringify({ metal: Math.floor(collected.metal), crystal: Math.floor(collected.crystal), deuterium: 0 }),
+    fleet.id,
+  );
+
+  db.prepare('INSERT INTO messages (id, user_id, type, title, body, created_at) VALUES (?, ?, ?, ?, ?, ?)').run(
+    msgId(nowUnix), fleet.user_id, 'system', 'Recyclage termine',
+    `Collecte en [${fleet.dest_galaxy}:${fleet.dest_system}:${fleet.dest_position}]: ${Math.floor(collected.metal)} Fe, ${Math.floor(collected.crystal)} Cr.`, nowUnix,
+  );
 }
 
 function resolveFleetReturn(db: ReturnType<typeof getDb>, fleet: FleetRow) {

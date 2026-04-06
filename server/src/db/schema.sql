@@ -85,6 +85,16 @@ CREATE TABLE IF NOT EXISTS shipyard_queues (
   started_at INTEGER NOT NULL DEFAULT (unixepoch())
 );
 
+-- Champs de debris
+CREATE TABLE IF NOT EXISTS debris_fields (
+  galaxy INTEGER NOT NULL,
+  system INTEGER NOT NULL,
+  position INTEGER NOT NULL,
+  metal REAL NOT NULL DEFAULT 0,
+  crystal REAL NOT NULL DEFAULT 0,
+  PRIMARY KEY (galaxy, system, position)
+);
+
 -- Mouvements de flotte
 CREATE TABLE IF NOT EXISTS fleet_movements (
   id TEXT PRIMARY KEY,

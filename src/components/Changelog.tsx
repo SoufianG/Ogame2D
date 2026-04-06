@@ -1,5 +1,22 @@
 const CHANGELOG = [
   {
+    version: '0.7.0',
+    date: '2026-04-05',
+    title: 'Combat, Espionnage & Missions de Flotte',
+    entries: [
+      { type: 'new' as const, text: 'Moteur de combat OGame complet cote serveur (6 rounds, rapid fire, debris 30%, pillage 50%)' },
+      { type: 'new' as const, text: 'Espionnage reel : rapport progressif selon niveau de technologie et nombre de sondes' },
+      { type: 'new' as const, text: 'Colonisation : creation de planete a une position vide avec vaisseau de colonisation' },
+      { type: 'new' as const, text: 'Transport de ressources entre planetes de joueurs' },
+      { type: 'new' as const, text: 'Recyclage : collecte des debris avec recycleurs' },
+      { type: 'new' as const, text: 'Champs de debris generes apres chaque bataille' },
+      { type: 'new' as const, text: 'Chance de lune apres un combat (1% par 100k debris, max 20%)' },
+      { type: 'new' as const, text: 'Reconstruction automatique de 70% des defenses detruites' },
+      { type: 'new' as const, text: 'Messages de combat envoyes aux deux joueurs (attaquant et defenseur)' },
+      { type: 'new' as const, text: 'Contre-espionnage : perte de sondes et alerte au defenseur' },
+    ],
+  },
+  {
     version: '0.6.0',
     date: '2026-04-06',
     title: 'Chantier Naval, Galaxie & Interface',
