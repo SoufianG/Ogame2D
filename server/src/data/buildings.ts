@@ -22,7 +22,6 @@ export const BUILDINGS: Record<string, BuildingDef> = {
   shipyard:             { baseCost: { metal: 400, crystal: 200, deuterium: 100 }, costFactor: 2, prerequisites: { buildings: { roboticsFactory: 2 } } },
   researchLab:          { baseCost: { metal: 200, crystal: 400, deuterium: 200 }, costFactor: 2, prerequisites: {} },
   allianceDepot:        { baseCost: { metal: 20000, crystal: 40000, deuterium: 0 }, costFactor: 2, prerequisites: {} },
-  terraformer:          { baseCost: { metal: 0, crystal: 50000, deuterium: 100000 }, costFactor: 2, prerequisites: { buildings: { researchLab: 1 }, research: { energyTech: 12 } } },
   missileSilo:          { baseCost: { metal: 20000, crystal: 20000, deuterium: 1000 }, costFactor: 2, prerequisites: { buildings: { shipyard: 1 } } },
   lunarBase:            { baseCost: { metal: 20000, crystal: 40000, deuterium: 20000 }, costFactor: 2, prerequisites: {} },
   sensorPhalanx:        { baseCost: { metal: 20000, crystal: 40000, deuterium: 20000 }, costFactor: 2, prerequisites: { buildings: { lunarBase: 1 } } },

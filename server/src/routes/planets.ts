@@ -68,7 +68,7 @@ router.post('/', (req: AuthRequest, res) => {
     solarPlant: 0, fusionReactor: 0,
     metalStorage: 0, crystalStorage: 0, deuteriumTank: 0,
     roboticsFactory: 0, shipyard: 0, researchLab: 0,
-    allianceDepot: 0, terraformer: 0, missileSilo: 0,
+    allianceDepot: 0, missileSilo: 0,
     lunarBase: 0, sensorPhalanx: 0, jumpGate: 0,
   });
 

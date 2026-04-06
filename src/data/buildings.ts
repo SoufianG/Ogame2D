@@ -155,18 +155,6 @@ export const BUILDINGS_DATA: Record<BuildingType, BuildingData> = {
     costFactor: 2,
     prerequisites: {},
   },
-  terraformer: {
-    id: 'terraformer',
-    name: 'Terraformeur',
-    description: 'Augmente le nombre de cases disponibles sur la planete.',
-    category: 'infrastructure',
-    baseCost: { metal: 0, crystal: 50000, deuterium: 100000 },
-    costFactor: 2,
-    prerequisites: {
-      buildings: { researchLab: 1 },
-      research: { energyTech: 12 },
-    },
-  },
   missileSilo: {
     id: 'missileSilo',
     name: 'Silo a Missiles',

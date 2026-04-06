@@ -20,7 +20,6 @@ export type InfrastructureBuilding =
   | 'shipyard'
   | 'researchLab'
   | 'allianceDepot'
-  | 'terraformer'
   | 'missileSilo';
 
 // Lunaire
