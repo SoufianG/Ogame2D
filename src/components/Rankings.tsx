@@ -46,7 +46,7 @@ function PlayerActions({ player, onClose }: { player: RankEntry; onClose: () => 
     setSending(false);
   };
 
-  const handleInvite = async (allianceId: string) => {
+  const handleInvite = async () => {
     // On envoie un message d'invitation avec le lien de l'alliance
     try {
       await apiPost('/social/send', {
@@ -82,7 +82,7 @@ function PlayerActions({ player, onClose }: { player: RankEntry; onClose: () => 
       <div className="player-actions-buttons">
         <button
           className="build-btn"
-          onClick={handleInvite.bind(null, '')}
+          onClick={handleInvite}
           title="Envoyer une invitation a rejoindre votre alliance"
         >
           Inviter en alliance
