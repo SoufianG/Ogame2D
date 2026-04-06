@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useGameStore } from '../store/gameStore';
 import { computeProduction, computeStorage } from '../utils/production';
-import { refreshGameState } from '../api/sync';
+import { refreshGameState, apiLoadMessages } from '../api/sync';
 import { getToken } from '../api/client';
 
 const TICK_INTERVAL = 1000; // interpolation locale chaque seconde
@@ -55,6 +55,12 @@ export function useResourceTick() {
       if (now - lastPoll.current >= POLL_INTERVAL && getToken()) {
         lastPoll.current = now;
         refreshGameState();
+        // Charger les messages serveur
+        apiLoadMessages().then((msgs) => {
+          if (msgs.length > 0) {
+            useGameStore.setState({ messages: msgs });
+          }
+        });
       }
     }, TICK_INTERVAL);
 

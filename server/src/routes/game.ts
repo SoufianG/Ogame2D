@@ -102,6 +102,15 @@ router.get('/state', (req: AuthRequest, res) => {
     };
   });
 
+  // Calculer le niveau effectif du labo (IRN)
+  const irnLvl = research.intergalacticResearchNetwork || 0;
+  const labLevels = planets.map((p) => {
+    const b = JSON.parse(p.buildings);
+    return (b.researchLab || 0) as number;
+  }).sort((a, b) => b - a);
+  const labsUsed = Math.min(irnLvl + 1, labLevels.length);
+  const effectiveLab = labLevels.slice(0, labsUsed).reduce((sum, l) => sum + l, 0);
+
   const fleets = db.prepare(
     'SELECT * FROM fleet_movements WHERE user_id = ? ORDER BY departure_time DESC',
   ).all(userId) as Record<string, unknown>[];
@@ -109,6 +118,7 @@ router.get('/state', (req: AuthRequest, res) => {
   res.json({
     planets: planetsData,
     research,
+    effectiveLab,
     researchQueue: researchQueue ? {
       planetId: researchQueue.planet_id,
       research: researchQueue.research,
@@ -427,9 +437,16 @@ router.post('/research/start', (req: AuthRequest, res) => {
     }
   }
 
-  // Temps de recherche
-  const labLevel = buildings.researchLab || 0;
-  const researchTime = getResearchTime(cost, labLevel);
+  // Temps de recherche — IRN : sommer les N meilleurs labos (N = IRN level + 1)
+  const irnLevel = researchData.intergalacticResearchNetwork || 0;
+  const allPlanets = db.prepare('SELECT buildings FROM planets WHERE user_id = ?').all(userId) as { buildings: string }[];
+  const allLabLevels = allPlanets.map((p) => {
+    const b = JSON.parse(p.buildings);
+    return b.researchLab || 0;
+  }).sort((a: number, b: number) => b - a);
+  const labCount = Math.min(irnLevel + 1, allLabLevels.length);
+  const effectiveLabLevel = allLabLevels.slice(0, labCount).reduce((sum: number, l: number) => sum + l, 0);
+  const researchTime = getResearchTime(cost, effectiveLabLevel);
 
   // Deduire les ressources
   db.prepare('UPDATE planets SET metal = metal - ?, crystal = crystal - ?, deuterium = deuterium - ? WHERE id = ?').run(
@@ -584,12 +601,13 @@ const SHIP_CARGO: Record<string, number> = {
 router.post('/fleet/send', (req: AuthRequest, res) => {
   const db = getDb();
   const userId = req.user!.userId;
-  const { planetId, destination, ships, mission, speed } = req.body as {
+  const { planetId, destination, ships, mission, speed, cargo } = req.body as {
     planetId: string;
     destination: { galaxy: number; system: number; position: number };
     ships: Record<string, number>;
     mission: string;
     speed: number;
+    cargo?: { metal: number; crystal: number; deuterium: number };
   };
 
   if (!planetId || !destination || !ships || !mission) {
@@ -632,8 +650,32 @@ router.post('/fleet/send', (req: AuthRequest, res) => {
   const totalShips = Object.values(ships).reduce((a, b) => a + b, 0);
   const fuelCost = Math.floor(distance * totalShips * 0.01);
 
-  if (planet.deuterium < fuelCost) {
-    res.status(400).json({ error: 'Deuterium insuffisant pour le carburant' });
+  // Cargo : valider la capacite et les ressources disponibles
+  const cargoData = cargo || { metal: 0, crystal: 0, deuterium: 0 };
+  const totalCargoLoad = cargoData.metal + cargoData.crystal + cargoData.deuterium;
+
+  // Calculer capacite cargo totale de la flotte
+  const fleetCargo = Object.entries(ships).reduce((sum, [type, count]) => {
+    return sum + (SHIP_CARGO[type] || 0) * count;
+  }, 0);
+
+  if (totalCargoLoad > fleetCargo) {
+    res.status(400).json({ error: `Cargo insuffisant (${fleetCargo} max)` });
+    return;
+  }
+
+  // Verifier ressources pour carburant + cargo charge
+  const totalDeutNeeded = fuelCost + cargoData.deuterium;
+  if (planet.deuterium < totalDeutNeeded) {
+    res.status(400).json({ error: 'Deuterium insuffisant pour le carburant et le cargo' });
+    return;
+  }
+  if (planet.metal < cargoData.metal) {
+    res.status(400).json({ error: 'Metal insuffisant pour le cargo' });
+    return;
+  }
+  if (planet.crystal < cargoData.crystal) {
+    res.status(400).json({ error: 'Cristal insuffisant pour le cargo' });
     return;
   }
 
@@ -648,19 +690,19 @@ router.post('/fleet/send', (req: AuthRequest, res) => {
   const arrivalTime = now + flightTime;
   const returnTime = mission !== 'deploy' ? now + flightTime * 2 : null;
 
-  db.prepare('UPDATE planets SET ships = ?, deuterium = deuterium - ? WHERE id = ?').run(
-    JSON.stringify(planetShips), fuelCost, planetId,
+  db.prepare('UPDATE planets SET ships = ?, metal = metal - ?, crystal = crystal - ?, deuterium = deuterium - ? WHERE id = ?').run(
+    JSON.stringify(planetShips), cargoData.metal, cargoData.crystal, fuelCost + cargoData.deuterium, planetId,
   );
 
   db.prepare(`
     INSERT INTO fleet_movements (id, user_id, ships, origin_galaxy, origin_system, origin_position,
       dest_galaxy, dest_system, dest_position, mission, cargo, speed, departure_time, arrival_time, return_time)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '{}', ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     fleetId, userId, JSON.stringify(ships),
     origin.galaxy, origin.system, origin.position,
     destination.galaxy, destination.system, destination.position,
-    mission, speed || 100, now, arrivalTime, returnTime,
+    mission, JSON.stringify(cargoData), speed || 100, now, arrivalTime, returnTime,
   );
 
   res.json({ ok: true, fleetId, arrivalTime: arrivalTime * 1000, fuelCost });

@@ -1032,6 +1032,54 @@
   padding: 0.15rem 0;
 }
 
+.fleet-cargo-info {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.fleet-cargo-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.fleet-cargo-inputs label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.fleet-cargo-inputs input {
+  width: 120px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  padding: 0.3rem 0.5rem;
+  color: #e2e8f0;
+  font-size: 0.85rem;
+}
+
+.fleet-cargo-inputs input:focus {
+  outline: none;
+  border-color: rgba(99, 179, 237, 0.5);
+}
+
+.cargo-avail {
+  font-size: 0.75rem;
+  opacity: 0.5;
+}
+
+.fleet-cargo-quick {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
 /* === Messages Page === */
 .message-filters {
   display: flex;

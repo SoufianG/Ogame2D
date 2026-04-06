@@ -65,6 +65,7 @@ interface GameState {
   planets: Planet[];
   currentPlanetId: string | null;
   research: Record<ResearchType, number>;
+  effectiveLab: number;
   buildingQueues: Record<string, BuildingQueueItem | null>;
   researchQueue: ResearchQueueItem | null;
   shipyardQueues: Record<string, ShipyardQueueItem[]>;
@@ -92,6 +93,7 @@ interface GameState {
     ships: Partial<Record<ShipType, number>>,
     mission: MissionType,
     speed: number,
+    cargo?: { metal: number; crystal: number; deuterium: number },
   ) => Promise<boolean>;
 
   // Messages (API)
@@ -130,6 +132,7 @@ export const useGameStore = create<GameState>()(
       planets: [],
       currentPlanetId: null,
       research: { ...defaultResearch },
+      effectiveLab: 0,
       buildingQueues: {},
       researchQueue: null,
       shipyardQueues: {},
@@ -190,8 +193,8 @@ export const useGameStore = create<GameState>()(
         return apiCancelResearch();
       },
 
-      sendFleet: async (originPlanetId, destination, ships, mission, speed) => {
-        return apiSendFleet(originPlanetId, destination, ships, mission, speed);
+      sendFleet: async (originPlanetId, destination, ships, mission, speed, cargo) => {
+        return apiSendFleet(originPlanetId, destination, ships, mission, speed, cargo);
       },
 
       // === Messages ===
@@ -255,6 +258,7 @@ export const useGameStore = create<GameState>()(
         planets: state.planets,
         currentPlanetId: state.currentPlanetId,
         research: state.research,
+        effectiveLab: state.effectiveLab,
         buildingQueues: state.buildingQueues,
         researchQueue: state.researchQueue,
         shipyardQueues: state.shipyardQueues,

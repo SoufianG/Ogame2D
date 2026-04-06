@@ -1,7 +1,23 @@
 const CHANGELOG = [
   {
+    version: '0.8.0',
+    date: '2026-04-06',
+    title: 'Envoi de Flottes & Reseau Intergalactique',
+    entries: [
+      { type: 'new' as const, text: 'Interface complete d\'envoi de flottes : selection vaisseaux, destination, mission, cargo' },
+      { type: 'new' as const, text: 'Chargement de ressources dans le cargo pour les missions Transport' },
+      { type: 'new' as const, text: 'Boutons "Tout charger" et "Vider" pour le chargement rapide du cargo' },
+      { type: 'new' as const, text: 'Reseau de Recherche Intergalactique fonctionnel : somme des N meilleurs labos' },
+      { type: 'new' as const, text: 'Affichage du niveau effectif du laboratoire dans la page Recherche' },
+      { type: 'improve' as const, text: 'Flottes en mouvement affichent le cargo transporte' },
+      { type: 'improve' as const, text: 'Les messages serveur (combat, espionnage, etc.) sont charges automatiquement' },
+      { type: 'improve' as const, text: 'Calcul du temps de trajet et du retour ameliore dans l\'affichage des flottes' },
+      { type: 'fix' as const, text: 'Le carburant et le cargo sont correctement deduits des ressources a l\'envoi' },
+    ],
+  },
+  {
     version: '0.7.0',
-    date: '2026-04-05',
+    date: '2026-04-06',
     title: 'Combat, Espionnage & Missions de Flotte',
     entries: [
       { type: 'new' as const, text: 'Moteur de combat OGame complet cote serveur (6 rounds, rapid fire, debris 30%, pillage 50%)' },

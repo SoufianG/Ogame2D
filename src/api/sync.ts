@@ -69,6 +69,7 @@ interface ServerFleet {
 interface ServerState {
   planets: ServerPlanet[];
   research: Record<string, number>;
+  effectiveLab: number;
   researchQueue: {
     planetId: string;
     research: string;
@@ -170,6 +171,7 @@ export async function refreshGameState(): Promise<boolean> {
         ? store.currentPlanetId
         : data.planets[0].id,
       research: { ...store.research, ...data.research } as Record<ResearchType, number>,
+      effectiveLab: data.effectiveLab,
       buildingQueues,
       shipyardQueues,
       researchQueue,
@@ -257,9 +259,10 @@ export async function apiSendFleet(
   ships: Partial<Record<ShipType, number>>,
   mission: MissionType,
   speed: number,
+  cargo?: { metal: number; crystal: number; deuterium: number },
 ): Promise<boolean> {
   try {
-    await apiPost('/game/fleet/send', { planetId, destination, ships, mission, speed });
+    await apiPost('/game/fleet/send', { planetId, destination, ships, mission, speed, cargo });
     await refreshGameState();
     return true;
   } catch (err) {

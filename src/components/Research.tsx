@@ -12,6 +12,7 @@ import { formatNumber, formatTime } from '../utils/format';
 function ResearchCard({ data }: { data: ResearchData }) {
   const planet = useGameStore((s) => s.currentPlanet)();
   const research = useGameStore((s) => s.research);
+  const effectiveLab = useGameStore((s) => s.effectiveLab);
   const researchQueue = useGameStore((s) => s.researchQueue);
   const startResearch = useGameStore((s) => s.startResearch);
   const cancelResearch = useGameStore((s) => s.cancelResearch);
@@ -21,7 +22,7 @@ function ResearchCard({ data }: { data: ResearchData }) {
   const currentLevel = research[data.id];
   const nextLevel = currentLevel + 1;
   const cost = getResearchCost(data, nextLevel);
-  const time = getResearchTime(cost, planet.buildings.researchLab);
+  const time = getResearchTime(cost, effectiveLab || planet.buildings.researchLab);
   const missing = checkPrerequisites(data.prerequisites, planet, research);
   const affordable = canAfford(cost, planet.resources);
   const isResearching = researchQueue?.research === data.id;
@@ -112,15 +113,23 @@ function ResearchCard({ data }: { data: ResearchData }) {
 
 export function Research() {
   const planet = useGameStore((s) => s.currentPlanet)();
+  const effectiveLab = useGameStore((s) => s.effectiveLab);
+  const research = useGameStore((s) => s.research);
 
   if (!planet) return <div>Aucune planete selectionnee</div>;
+
+  const localLab = planet.buildings.researchLab;
+  const irnLevel = research.intergalacticResearchNetwork || 0;
 
   return (
     <div className="buildings-page">
       <div className="page-header">
         <h2>Recherche</h2>
         <span className="slots-info">
-          Laboratoire niv. {planet.buildings.researchLab}
+          Labo niv. {localLab}
+          {irnLevel > 0 && effectiveLab > localLab && (
+            <> (effectif: {effectiveLab})</>
+          )}
         </span>
       </div>
 
