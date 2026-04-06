@@ -9,6 +9,7 @@ import gameRoutes from './routes/game.js';
 import allianceRoutes from './routes/alliance.js';
 import socialRoutes from './routes/social.js';
 import rankingRoutes from './routes/rankings.js';
+import achievementRoutes from './routes/achievements.js';
 
 const PORT = parseInt(process.env.PORT || '3001');
 const CORS_ORIGIN = process.env.CORS_ORIGIN || 'http://localhost:5173';
@@ -35,6 +36,7 @@ app.use('/api/game', gameRoutes);
 app.use('/api/alliance', allianceRoutes);
 app.use('/api/social', socialRoutes);
 app.use('/api/rankings', rankingRoutes);
+app.use('/api/achievements', achievementRoutes);
 
 // Start game loop
 startGameLoop();

@@ -1,9 +1,12 @@
 import { getDb } from '../db/database.js';
 import { computeProduction, computeStorage, type Buildings } from './production.js';
 import { simulateCombat } from './combat.js';
+import { checkAchievements } from '../routes/achievements.js';
 
 const TICK_INTERVAL = 5000; // 5 secondes
+const ACHIEVEMENT_CHECK_INTERVAL = 30000; // 30 secondes
 let tickTimer: ReturnType<typeof setInterval> | null = null;
+let achievementTimer: ReturnType<typeof setInterval> | null = null;
 
 interface PlanetRow {
   id: string;
@@ -69,16 +72,30 @@ interface FleetRow {
 export function startGameLoop() {
   if (tickTimer) return;
   console.log('Game loop started (every 5s)');
-  // Au demarrage, recalculer les remaining_time de toutes les queues
-  // pour rattraper le temps ecoule pendant l'arret du serveur
   recalculateAllQueues();
   tickTimer = setInterval(gameTick, TICK_INTERVAL);
+  // Verifier les achievements toutes les 30s pour tous les joueurs actifs
+  achievementTimer = setInterval(() => {
+    try {
+      const db = getDb();
+      const users = db.prepare('SELECT id FROM users WHERE is_active = 1').all() as { id: string }[];
+      for (const u of users) {
+        checkAchievements(u.id);
+      }
+    } catch (err) {
+      console.error('Achievement check error:', err);
+    }
+  }, ACHIEVEMENT_CHECK_INTERVAL);
 }
 
 export function stopGameLoop() {
   if (tickTimer) {
     clearInterval(tickTimer);
     tickTimer = null;
+  }
+  if (achievementTimer) {
+    clearInterval(achievementTimer);
+    achievementTimer = null;
   }
 }
 

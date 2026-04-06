@@ -176,6 +176,22 @@ CREATE TABLE IF NOT EXISTS rankings (
   updated_at INTEGER NOT NULL DEFAULT (unixepoch())
 );
 
+-- Achievements (succes debloques par joueur)
+CREATE TABLE IF NOT EXISTS achievements (
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  achievement_id TEXT NOT NULL,
+  unlocked_at INTEGER NOT NULL DEFAULT (unixepoch()),
+  claimed INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (user_id, achievement_id)
+);
+
+-- Tutoriel (progression par joueur)
+CREATE TABLE IF NOT EXISTS tutorial_progress (
+  user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  current_step INTEGER NOT NULL DEFAULT 0,
+  completed INTEGER NOT NULL DEFAULT 0
+);
+
 -- Index
 CREATE INDEX IF NOT EXISTS idx_planets_user ON planets(user_id);
 CREATE INDEX IF NOT EXISTS idx_planets_coords ON planets(galaxy, system, position);

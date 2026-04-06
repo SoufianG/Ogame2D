@@ -1,5 +1,19 @@
 const CHANGELOG = [
   {
+    version: '0.9.0',
+    date: '2026-04-06',
+    title: 'Succes, Arbre Tech & Tutoriel',
+    entries: [
+      { type: 'new' as const, text: '32 succes a debloquer avec recompenses en ressources (5 categories)' },
+      { type: 'new' as const, text: 'Arbre technologique interactif : visualisation des recherches et prereqs' },
+      { type: 'new' as const, text: 'Tutoriel pas-a-pas pour les nouveaux joueurs (11 etapes)' },
+      { type: 'new' as const, text: 'Barre de progression globale des succes' },
+      { type: 'new' as const, text: 'Recompenses reclamables depuis la page Succes (metal, cristal, deuterium)' },
+      { type: 'improve' as const, text: 'Verification automatique des succes toutes les 30 secondes' },
+      { type: 'improve' as const, text: 'Navigation Technologies et Succes dans le menu principal' },
+    ],
+  },
+  {
     version: '0.8.0',
     date: '2026-04-06',
     title: 'Flottes, Classement & Boost Production',

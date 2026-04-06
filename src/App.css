@@ -1833,6 +1833,193 @@
   border-color: rgba(99, 179, 237, 0.5);
 }
 
+/* === Tech Tree === */
+.tech-tree-container {
+  position: relative;
+  overflow-x: auto;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 1rem;
+  padding: 1rem;
+}
+
+.tech-tree-svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+}
+
+.tech-tree-nodes {
+  position: relative;
+}
+
+.tech-node-wrapper {
+  position: absolute;
+}
+
+.tech-node {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.6rem;
+  text-align: center;
+  transition: all 0.2s;
+}
+
+.tech-node:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.tech-unlocked {
+  border-color: rgba(72, 187, 120, 0.5);
+  background: rgba(72, 187, 120, 0.08);
+}
+
+.tech-available {
+  border-color: rgba(99, 179, 237, 0.5);
+  background: rgba(99, 179, 237, 0.08);
+}
+
+.tech-locked {
+  opacity: 0.4;
+}
+
+.tech-node-name {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #e2e8f0;
+  margin-bottom: 0.2rem;
+  line-height: 1.2;
+}
+
+.tech-node-level {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.tech-unlocked .tech-node-level {
+  color: rgba(72, 187, 120, 0.9);
+}
+
+.tech-available .tech-node-level {
+  color: rgba(99, 179, 237, 0.9);
+}
+
+/* === Achievements === */
+.achievement-progress {
+  margin-bottom: 1rem;
+}
+
+.achievement-icon {
+  font-size: 1.5rem;
+  margin-right: 0.5rem;
+  min-width: 2rem;
+  text-align: center;
+}
+
+.achievement-reward-label {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.4);
+  margin-right: 0.3rem;
+}
+
+/* === Tutorial === */
+.tutorial-overlay {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  z-index: 1000;
+  max-width: 380px;
+  width: 100%;
+}
+
+.tutorial-card {
+  background: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(99, 179, 237, 0.3);
+  border-radius: 1rem;
+  padding: 1.25rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.tutorial-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.tutorial-step {
+  font-size: 0.75rem;
+  color: rgba(99, 179, 237, 0.8);
+  font-weight: 600;
+}
+
+.tutorial-skip {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.4);
+  cursor: pointer;
+  font-size: 0.75rem;
+  padding: 0.2rem 0.4rem;
+}
+
+.tutorial-skip:hover {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.tutorial-title {
+  font-size: 1rem;
+  color: #e2e8f0;
+  margin: 0 0 0.5rem;
+}
+
+.tutorial-desc {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.7);
+  margin: 0 0 0.75rem;
+  line-height: 1.4;
+}
+
+.tutorial-hint {
+  background: rgba(99, 179, 237, 0.08);
+  border: 1px solid rgba(99, 179, 237, 0.2);
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.8rem;
+  color: rgba(99, 179, 237, 0.9);
+  margin-bottom: 0.75rem;
+}
+
+.tutorial-progress {
+  margin-bottom: 0.75rem;
+}
+
+.tutorial-reopen {
+  position: fixed;
+  bottom: 1rem;
+  right: 1rem;
+  z-index: 999;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(99, 179, 237, 0.2);
+  border: 1px solid rgba(99, 179, 237, 0.4);
+  color: rgba(99, 179, 237, 0.9);
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tutorial-reopen:hover {
+  background: rgba(99, 179, 237, 0.3);
+}
+
 /* === Changelog === */
 .changelog-release {
   background: rgba(255, 255, 255, 0.03);

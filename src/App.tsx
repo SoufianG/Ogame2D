@@ -11,6 +11,9 @@ import { Auth } from './components/Auth';
 import { Alliance } from './components/Alliance';
 import { Rankings } from './components/Rankings';
 import { Changelog } from './components/Changelog';
+import { Achievements } from './components/Achievements';
+import { TechTree } from './components/TechTree';
+import { Tutorial, TutorialButton } from './components/Tutorial';
 import { ResourceBar } from './components/ResourceBar';
 import { useResourceTick } from './hooks/useResourceTick';
 import { useAuth } from './hooks/useAuth';
@@ -28,6 +31,8 @@ const NAV_ITEMS = [
   { path: '/galaxy', label: 'Galaxie' },
   { path: '/messages', label: 'Messages' },
   { path: '/alliance', label: 'Alliance' },
+  { path: '/techtree', label: 'Technologies' },
+  { path: '/achievements', label: 'Succes' },
   { path: '/rankings', label: 'Classement' },
   { path: '/changelog', label: 'Changelog' },
 ];
@@ -113,8 +118,10 @@ function GameApp({ username, onLogout }: { username: string; onLogout: () => voi
           <button className="nav-logout" onClick={onLogout}>Deconnexion</button>
         </div>
       </nav>
+      <Tutorial />
       <main className="game-content">
         <ResourceBar />
+        <TutorialButton />
         <Routes>
           <Route path="/" element={<Overview />} />
           <Route path="/buildings" element={<Buildings />} />
@@ -125,6 +132,8 @@ function GameApp({ username, onLogout }: { username: string; onLogout: () => voi
           <Route path="/galaxy" element={<Galaxy />} />
           <Route path="/messages" element={<Messages />} />
           <Route path="/alliance" element={<Alliance />} />
+          <Route path="/techtree" element={<TechTree />} />
+          <Route path="/achievements" element={<Achievements />} />
           <Route path="/rankings" element={<Rankings />} />
           <Route path="/changelog" element={<Changelog />} />
         </Routes>
