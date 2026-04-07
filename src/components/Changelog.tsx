@@ -1,5 +1,17 @@
 const CHANGELOG = [
   {
+    version: '0.12.0',
+    date: '2026-04-07',
+    title: 'Gestion fine de l\'energie',
+    entries: [
+      { type: 'new' as const, text: 'Slider de production 0-100% sur chaque batiment producteur (mines, synthetiseur, solaire, fusion)' },
+      { type: 'new' as const, text: 'Reduire la production d\'une mine reduit aussi sa consommation d\'energie — utile en cas de deficit' },
+      { type: 'new' as const, text: 'Apercu detaille du prochain niveau pour chaque batiment : delta production et delta energie' },
+      { type: 'improve' as const, text: 'L\'energie est desormais explicite : on voit ce que coute le prochain niveau avant de construire' },
+      { type: 'improve' as const, text: 'Les facteurs de production sont persistes en DB et appliques par le tick serveur' },
+    ],
+  },
+  {
     version: '0.11.1',
     date: '2026-04-07',
     title: 'Infobulles galaxie interactives',

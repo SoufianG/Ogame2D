@@ -483,6 +483,64 @@ img[src*="fer.png"] {
   margin-left: auto;
 }
 
+.building-preview {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.6rem;
+  background: rgba(96, 165, 250, 0.08);
+  border-left: 2px solid rgba(96, 165, 250, 0.5);
+  border-radius: 4px;
+  font-size: 0.74rem;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.preview-label {
+  color: rgba(96, 165, 250, 0.9);
+  font-weight: 600;
+}
+
+.preview-delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.preview-delta.negative {
+  color: #f87171;
+}
+
+.preview-delta.positive {
+  color: #4ade80;
+}
+
+.production-slider {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 0.5rem 0.6rem;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 4px;
+}
+
+.slider-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.slider-value {
+  font-weight: 600;
+  color: #fbbf24;
+}
+
+.slider-input {
+  width: 100%;
+  cursor: pointer;
+}
+
 .building-prereqs {
   display: flex;
   flex-direction: column;

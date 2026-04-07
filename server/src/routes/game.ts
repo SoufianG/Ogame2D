@@ -27,6 +27,7 @@ interface PlanetRow {
   crystal: number;
   deuterium: number;
   buildings: string;
+  production_factors: string;
   ships: string;
   defenses: string;
   created_at: number;
@@ -49,9 +50,10 @@ router.get('/state', (req: AuthRequest, res) => {
 
   const planetsData = planets.map((p) => {
     const buildings = JSON.parse(p.buildings);
+    const productionFactors = JSON.parse(p.production_factors || '{}');
     const ships = JSON.parse(p.ships);
     const defenses = JSON.parse(p.defenses);
-    const production = computeProduction(buildings, p.temperature);
+    const production = computeProduction(buildings, p.temperature, productionFactors);
     const storage = {
       metal: computeStorage(buildings.metalStorage || 0),
       crystal: computeStorage(buildings.crystalStorage || 0),
@@ -80,6 +82,7 @@ router.get('/state', (req: AuthRequest, res) => {
       crystal: p.crystal,
       deuterium: p.deuterium,
       buildings,
+      productionFactors,
       ships,
       defenses,
       production,
@@ -139,6 +142,41 @@ router.get('/state', (req: AuthRequest, res) => {
       returnTime: f.return_time,
     })),
   });
+});
+
+// === PRODUCTION FACTORS — Slider 0-100% par batiment producteur ===
+
+const PRODUCER_BUILDINGS = new Set(['metalMine', 'crystalMine', 'deuteriumSynthesizer', 'solarPlant', 'fusionReactor']);
+
+router.put('/planets/:id/production', (req: AuthRequest, res) => {
+  const db = getDb();
+  const userId = req.user!.userId;
+  const planetId = req.params.id;
+  const { building, factor } = req.body as { building: string; factor: number };
+
+  if (!building || !PRODUCER_BUILDINGS.has(building)) {
+    res.status(400).json({ error: 'Batiment invalide' });
+    return;
+  }
+  const f = Number(factor);
+  if (!Number.isFinite(f) || f < 0 || f > 1) {
+    res.status(400).json({ error: 'Facteur invalide (0-1)' });
+    return;
+  }
+  // Snap au pas de 0.1
+  const snapped = Math.round(f * 10) / 10;
+
+  const planet = db.prepare('SELECT production_factors FROM planets WHERE id = ? AND user_id = ?').get(planetId, userId) as { production_factors: string } | undefined;
+  if (!planet) {
+    res.status(404).json({ error: 'Planete introuvable' });
+    return;
+  }
+
+  const factors = JSON.parse(planet.production_factors || '{}');
+  factors[building] = snapped;
+  db.prepare('UPDATE planets SET production_factors = ? WHERE id = ?').run(JSON.stringify(factors), planetId);
+
+  res.json({ ok: true, productionFactors: factors });
 });
 
 // === BUILD — Lancer une construction ===

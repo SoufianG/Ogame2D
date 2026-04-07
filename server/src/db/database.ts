@@ -35,6 +35,9 @@ export function migrateDb(): void {
   if (!colNames.has('last_pillaged')) {
     db.exec('ALTER TABLE planets ADD COLUMN last_pillaged INTEGER DEFAULT NULL');
   }
+  if (!colNames.has('production_factors')) {
+    db.exec("ALTER TABLE planets ADD COLUMN production_factors TEXT NOT NULL DEFAULT '{}'");
+  }
 
   // Seed user sentinel NPC
   const npcUser = db.prepare("SELECT id FROM users WHERE id = 'npc'").get();

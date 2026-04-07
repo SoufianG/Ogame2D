@@ -1,4 +1,4 @@
-import { apiGet, apiPost } from './client';
+import { apiGet, apiPost, apiPut } from './client';
 import { useGameStore } from '../store/gameStore';
 import type { Planet } from '../types';
 import type { BuildingType } from '../types/building';
@@ -23,12 +23,16 @@ interface ServerPlanet {
   crystal: number;
   deuterium: number;
   buildings: Record<string, number>;
+  productionFactors?: Record<string, number>;
   ships: Record<string, number>;
   defenses: Record<string, number>;
   production: {
     metalPerHour: number;
     crystalPerHour: number;
     deuteriumPerHour: number;
+    energyProduction: number;
+    energyConsumption: number;
+    energyBalance: number;
     efficiency: number;
   };
   storage: {
@@ -94,6 +98,7 @@ function serverPlanetToLocal(p: ServerPlanet): Planet {
     resources: { metal: p.metal, crystal: p.crystal, deuterium: p.deuterium },
     storage: p.storage,
     buildings: p.buildings as Planet['buildings'],
+    productionFactors: p.productionFactors as Planet['productionFactors'],
     ships: p.ships,
     defenses: p.defenses,
     moon: undefined,
@@ -267,6 +272,17 @@ export async function apiSendFleet(
     return true;
   } catch (err) {
     console.error('Send fleet failed:', err);
+    return false;
+  }
+}
+
+export async function apiSetProductionFactor(planetId: string, building: string, factor: number): Promise<boolean> {
+  try {
+    await apiPut(`/game/planets/${planetId}/production`, { building, factor });
+    await refreshGameState();
+    return true;
+  } catch (err) {
+    console.error('Set production factor failed:', err);
     return false;
   }
 }

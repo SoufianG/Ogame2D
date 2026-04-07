@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS planets (
   crystal REAL NOT NULL DEFAULT 500,
   deuterium REAL NOT NULL DEFAULT 0,
   buildings TEXT NOT NULL DEFAULT '{}',  -- JSON
+  production_factors TEXT NOT NULL DEFAULT '{}', -- JSON Record<BuildingType, number 0-1>
   ships TEXT NOT NULL DEFAULT '{}',      -- JSON
   defenses TEXT NOT NULL DEFAULT '{}',   -- JSON
   is_npc INTEGER NOT NULL DEFAULT 0,

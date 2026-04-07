@@ -16,13 +16,35 @@ export interface ProductionRates {
   metalPerHour: number;
   crystalPerHour: number;
   deuteriumPerHour: number;
+  energyProduction: number;
+  energyConsumption: number;
+  energyBalance: number;
   efficiency: number;
 }
+
+export type ProductionFactors = Partial<Record<string, number>>;
 
 // Multiplicateur global de production (1.5 = +50%)
 const PRODUCTION_MULTIPLIER = 1.5;
 
-export function computeProduction(buildings: Buildings, temperature: number): ProductionRates {
+const PRODUCERS = ['metalMine', 'crystalMine', 'deuteriumSynthesizer', 'solarPlant', 'fusionReactor'] as const;
+
+export function getFactor(factors: ProductionFactors | undefined, building: string): number {
+  if (!factors) return 1;
+  const v = factors[building];
+  if (v === undefined || v === null) return 1;
+  return Math.max(0, Math.min(1, v));
+}
+
+export function isProducer(building: string): boolean {
+  return (PRODUCERS as readonly string[]).includes(building);
+}
+
+export function computeProduction(
+  buildings: Buildings,
+  temperature: number,
+  factors?: ProductionFactors,
+): ProductionRates {
   const baseMetal = 30;
   const baseCrystal = 15;
 
@@ -32,21 +54,27 @@ export function computeProduction(buildings: Buildings, temperature: number): Pr
   const solarPlant = buildings.solarPlant || 0;
   const fusionReactor = buildings.fusionReactor || 0;
 
-  const metalProduction = Math.floor(30 * metalMine * Math.pow(1.1, metalMine));
-  const crystalProduction = Math.floor(20 * crystalMine * Math.pow(1.1, crystalMine));
+  const fMetal = getFactor(factors, 'metalMine');
+  const fCrystal = getFactor(factors, 'crystalMine');
+  const fDeut = getFactor(factors, 'deuteriumSynthesizer');
+  const fSolar = getFactor(factors, 'solarPlant');
+  const fFusion = getFactor(factors, 'fusionReactor');
+
+  const metalProduction = Math.floor(30 * metalMine * Math.pow(1.1, metalMine) * fMetal);
+  const crystalProduction = Math.floor(20 * crystalMine * Math.pow(1.1, crystalMine) * fCrystal);
   const deutProduction = Math.floor(
-    10 * deutSynth * Math.pow(1.1, deutSynth) * (1.28 - 0.002 * temperature),
+    10 * deutSynth * Math.pow(1.1, deutSynth) * (1.28 - 0.002 * temperature) * fDeut,
   );
 
   // Energie
-  const solarEnergy = Math.floor(20 * solarPlant * Math.pow(1.1, solarPlant));
-  const fusionEnergy = Math.floor(30 * fusionReactor * Math.pow(1.05, fusionReactor));
+  const solarEnergy = Math.floor(20 * solarPlant * Math.pow(1.1, solarPlant) * fSolar);
+  const fusionEnergy = Math.floor(30 * fusionReactor * Math.pow(1.05, fusionReactor) * fFusion);
   const energyProduction = solarEnergy + fusionEnergy;
 
-  const metalConsumption = Math.floor(10 * metalMine * Math.pow(1.1, metalMine));
-  const crystalConsumption = Math.floor(10 * crystalMine * Math.pow(1.1, crystalMine));
-  const deutConsumption = Math.floor(20 * deutSynth * Math.pow(1.1, deutSynth));
-  const fusionConsumption = Math.floor(10 * fusionReactor * Math.pow(1.1, fusionReactor));
+  const metalConsumption = Math.floor(10 * metalMine * Math.pow(1.1, metalMine) * fMetal);
+  const crystalConsumption = Math.floor(10 * crystalMine * Math.pow(1.1, crystalMine) * fCrystal);
+  const deutConsumption = Math.floor(20 * deutSynth * Math.pow(1.1, deutSynth) * fDeut);
+  const fusionConsumption = Math.floor(10 * fusionReactor * Math.pow(1.1, fusionReactor) * fFusion);
   const energyConsumption = metalConsumption + crystalConsumption + deutConsumption + fusionConsumption;
 
   const efficiency = energyConsumption > 0
@@ -57,6 +85,9 @@ export function computeProduction(buildings: Buildings, temperature: number): Pr
     metalPerHour: Math.floor((baseMetal + metalProduction) * efficiency * PRODUCTION_MULTIPLIER),
     crystalPerHour: Math.floor((baseCrystal + crystalProduction) * efficiency * PRODUCTION_MULTIPLIER),
     deuteriumPerHour: Math.floor(deutProduction * efficiency * PRODUCTION_MULTIPLIER),
+    energyProduction,
+    energyConsumption,
+    energyBalance: energyProduction - energyConsumption,
     efficiency,
   };
 }

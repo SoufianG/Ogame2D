@@ -8,6 +8,7 @@ import {
 import type { BuildingData } from '../data/buildings';
 import { checkPrerequisites, canAfford } from '../utils/prerequisites';
 import { formatNumber, formatTime } from '../utils/format';
+import { computeNextLevelPreview, isProducerBuilding } from '../utils/production';
 
 function BuildingCard({ data }: { data: BuildingData }) {
   const planet = useGameStore((s) => s.currentPlanet)();
@@ -17,8 +18,13 @@ function BuildingCard({ data }: { data: BuildingData }) {
   );
   const startBuilding = useGameStore((s) => s.startBuilding);
   const cancelBuilding = useGameStore((s) => s.cancelBuilding);
+  const setProductionFactor = useGameStore((s) => s.setProductionFactor);
 
   if (!planet) return null;
+
+  const isProducer = isProducerBuilding(data.id);
+  const factor = (planet.productionFactors?.[data.id] ?? 1);
+  const preview = planet.buildings[data.id] >= 0 ? computeNextLevelPreview(planet, data.id) : null;
 
   const currentLevel = planet.buildings[data.id];
   const nextLevel = currentLevel + 1;
@@ -67,6 +73,55 @@ function BuildingCard({ data }: { data: BuildingData }) {
         )}
         <span className="build-time">{formatTime(time)}</span>
       </div>
+
+      {/* Apercu prochain niveau (energie + production pour producteurs) */}
+      {preview && (preview.deltaEnergyProduction !== 0 || preview.deltaEnergyConsumption !== 0 || preview.deltaMetal !== 0 || preview.deltaCrystal !== 0 || preview.deltaDeuterium !== 0) && (
+        <div className="building-preview">
+          <span className="preview-label">Niv. {nextLevel} :</span>
+          {preview.deltaMetal !== 0 && (
+            <span className="preview-delta">
+              <img src="/assets/fer.png" alt="" className="cost-icon" /> {preview.deltaMetal > 0 ? '+' : ''}{formatNumber(preview.deltaMetal)}/h
+            </span>
+          )}
+          {preview.deltaCrystal !== 0 && (
+            <span className="preview-delta">
+              <img src="/assets/cristal.png" alt="" className="cost-icon" /> {preview.deltaCrystal > 0 ? '+' : ''}{formatNumber(preview.deltaCrystal)}/h
+            </span>
+          )}
+          {preview.deltaDeuterium !== 0 && (
+            <span className="preview-delta">
+              <img src="/assets/deuterium.png" alt="" className="cost-icon" /> {preview.deltaDeuterium > 0 ? '+' : ''}{formatNumber(preview.deltaDeuterium)}/h
+            </span>
+          )}
+          {preview.deltaEnergyBalance !== 0 && (
+            <span className={`preview-delta ${preview.deltaEnergyBalance < 0 ? 'negative' : 'positive'}`}>
+              ⚡ {preview.deltaEnergyBalance > 0 ? '+' : ''}{formatNumber(preview.deltaEnergyBalance)}
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Slider production 0-100% pour les producteurs */}
+      {isProducer && (
+        <div className="production-slider">
+          <div className="slider-header">
+            <span className="slider-label">Production</span>
+            <span className="slider-value">{Math.round(factor * 100)}%</span>
+          </div>
+          <input
+            type="range"
+            min={0}
+            max={100}
+            step={10}
+            value={Math.round(factor * 100)}
+            onChange={(e) => {
+              const v = parseInt(e.target.value) / 100;
+              setProductionFactor(planet.id, data.id, v);
+            }}
+            className="slider-input"
+          />
+        </div>
+      )}
 
       {/* Prerequis manquants */}
       {locked && (

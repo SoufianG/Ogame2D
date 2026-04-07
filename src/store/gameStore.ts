@@ -11,6 +11,7 @@ import {
   apiStartResearch,
   apiCancelResearch,
   apiSendFleet,
+  apiSetProductionFactor,
 } from '../api/sync';
 import { apiPut, apiDelete } from '../api/client';
 
@@ -106,6 +107,9 @@ interface GameState {
     speed: number,
     cargo?: { metal: number; crystal: number; deuterium: number },
   ) => Promise<boolean>;
+
+  // Production factors (slider 0-1 par batiment producteur)
+  setProductionFactor: (planetId: string, building: BuildingType, factor: number) => Promise<boolean>;
 
   // Messages (API)
   markMessageRead: (id: string) => void;
@@ -210,6 +214,18 @@ export const useGameStore = create<GameState>()(
 
       sendFleet: async (originPlanetId, destination, ships, mission, speed, cargo) => {
         return apiSendFleet(originPlanetId, destination, ships, mission, speed, cargo);
+      },
+
+      setProductionFactor: async (planetId, building, factor) => {
+        // Optimistic update local pour reactivite slider
+        set((s) => ({
+          planets: s.planets.map((p) =>
+            p.id === planetId
+              ? { ...p, productionFactors: { ...(p.productionFactors || {}), [building]: factor } }
+              : p,
+          ),
+        }));
+        return apiSetProductionFactor(planetId, building, factor);
       },
 
       // === Messages ===

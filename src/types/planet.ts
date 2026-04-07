@@ -30,6 +30,7 @@ export interface Planet {
   resources: Resources;
   storage: ResourceStorage;
   buildings: Record<BuildingType, number>; // type -> niveau
+  productionFactors?: Partial<Record<BuildingType, number>>; // 0-1, defaut 1
   ships: Partial<Record<ShipType, number>>;
   defenses: Partial<Record<DefenseType, number>>;
   moon?: Moon;

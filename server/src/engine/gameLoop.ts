@@ -18,6 +18,7 @@ interface PlanetRow {
   deuterium: number;
   temperature: number;
   buildings: string;
+  production_factors: string;
   ships: string;
   defenses: string;
 }
@@ -231,12 +232,13 @@ export function catchUp(userId: string) {
 
   for (const planet of planets) {
     // Re-lire les buildings au cas ou une construction vient d'etre completee
-    const freshPlanet = db.prepare('SELECT buildings, metal, crystal, deuterium FROM planets WHERE id = ?').get(planet.id) as {
-      buildings: string; metal: number; crystal: number; deuterium: number;
+    const freshPlanet = db.prepare('SELECT buildings, production_factors, metal, crystal, deuterium FROM planets WHERE id = ?').get(planet.id) as {
+      buildings: string; production_factors: string; metal: number; crystal: number; deuterium: number;
     };
     const buildings = JSON.parse(freshPlanet.buildings) as Buildings;
+    const factors = JSON.parse(freshPlanet.production_factors || '{}');
 
-    const rates = computeProduction(buildings, planet.temperature);
+    const rates = computeProduction(buildings, planet.temperature, factors);
     const metalStorage = computeStorage(buildings.metalStorage || 0);
     const crystalStorage = computeStorage(buildings.crystalStorage || 0);
     const deutStorage = computeStorage(buildings.deuteriumTank || 0);
@@ -262,7 +264,8 @@ function tickProduction(db: ReturnType<typeof getDb>, deltaSeconds: number) {
   const txn = db.transaction(() => {
     for (const planet of planets) {
       const buildings = JSON.parse(planet.buildings) as Buildings;
-      const rates = computeProduction(buildings, planet.temperature);
+      const factors = JSON.parse(planet.production_factors || '{}');
+      const rates = computeProduction(buildings, planet.temperature, factors);
 
       const metalStorage = computeStorage(buildings.metalStorage || 0);
       const crystalStorage = computeStorage(buildings.crystalStorage || 0);
