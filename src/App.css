@@ -206,6 +206,12 @@
   flex-shrink: 0;
 }
 
+/* L'icone fer.png est croppee plus serree que les autres : compenser */
+img[src*="fer.png"] {
+  transform: scale(2);
+  transform-origin: center;
+}
+
 .resource-icon.metal { background: rgba(148, 163, 184, 0.2); }
 .resource-icon.crystal { background: rgba(96, 165, 250, 0.2); }
 .resource-icon.deuterium { background: rgba(45, 212, 191, 0.2); }
