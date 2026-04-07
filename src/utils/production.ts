@@ -4,9 +4,15 @@ import type { BuildingType } from '../types/building';
 export type ProductionFactors = Partial<Record<BuildingType, number>>;
 
 const PRODUCERS: BuildingType[] = ['metalMine', 'crystalMine', 'deuteriumSynthesizer', 'solarPlant', 'fusionReactor'];
+// Batiments avec slider (consomment une ressource : energie ou deuterium)
+const SLIDER_BUILDINGS: BuildingType[] = ['metalMine', 'crystalMine', 'deuteriumSynthesizer', 'fusionReactor'];
 
 export function isProducerBuilding(building: BuildingType): boolean {
   return PRODUCERS.includes(building);
+}
+
+export function hasProductionSlider(building: BuildingType): boolean {
+  return SLIDER_BUILDINGS.includes(building);
 }
 
 function getFactor(factors: ProductionFactors | undefined, building: BuildingType): number {
@@ -93,6 +99,35 @@ export function computeProduction(planet: Planet, overrideFactors?: ProductionFa
 // Stockage selon niveau du hangar : 5000 * floor(2.5 * e^(level * 20/33))
 export function computeStorage(level: number): number {
   return Math.floor(5000 * Math.floor(2.5 * Math.exp((level * 20) / 33)));
+}
+
+// Production brute d'une mine a un niveau donne (sans efficacite, sans multiplicateur global)
+// Multipliee par le PRODUCTION_MULTIPLIER pour matcher ce que le joueur voit a l'ecran en rythme nominal
+const PRODUCTION_MULTIPLIER_UI = 1.5;
+
+export function computeRawProductionDelta(building: BuildingType, planet: Planet): number {
+  const level = planet.buildings[building];
+  const next = level + 1;
+  const temp = planet.temperature;
+  switch (building) {
+    case 'metalMine': {
+      const prev = Math.floor(30 * level * Math.pow(1.1, level));
+      const now = Math.floor(30 * next * Math.pow(1.1, next));
+      return Math.floor((now - prev) * PRODUCTION_MULTIPLIER_UI);
+    }
+    case 'crystalMine': {
+      const prev = Math.floor(20 * level * Math.pow(1.1, level));
+      const now = Math.floor(20 * next * Math.pow(1.1, next));
+      return Math.floor((now - prev) * PRODUCTION_MULTIPLIER_UI);
+    }
+    case 'deuteriumSynthesizer': {
+      const prev = Math.floor(10 * level * Math.pow(1.1, level) * (1.28 - 0.002 * temp));
+      const now = Math.floor(10 * next * Math.pow(1.1, next) * (1.28 - 0.002 * temp));
+      return Math.floor((now - prev) * PRODUCTION_MULTIPLIER_UI);
+    }
+    default:
+      return 0;
+  }
 }
 
 // Apercu de la production avec un batiment monte d'un niveau

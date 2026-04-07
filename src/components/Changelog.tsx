@@ -1,5 +1,15 @@
 const CHANGELOG = [
   {
+    version: '0.12.1',
+    date: '2026-04-07',
+    title: 'Correctifs energie',
+    entries: [
+      { type: 'fix' as const, text: 'Aperçu prochain niveau : n\'affiche plus de faux "deltas" négatifs sur les autres ressources (c\'etait un effet de bord de l\'efficacite globale)' },
+      { type: 'fix' as const, text: 'Suppression du slider sur la centrale solaire (ne consomme rien)' },
+      { type: 'improve' as const, text: 'L\'aperçu affiche uniquement la ressource produite par le bâtiment + le delta énergie' },
+    ],
+  },
+  {
     version: '0.12.0',
     date: '2026-04-07',
     title: 'Gestion fine de l\'energie',

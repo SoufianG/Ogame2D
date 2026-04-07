@@ -8,7 +8,14 @@ import {
 import type { BuildingData } from '../data/buildings';
 import { checkPrerequisites, canAfford } from '../utils/prerequisites';
 import { formatNumber, formatTime } from '../utils/format';
-import { computeNextLevelPreview, isProducerBuilding } from '../utils/production';
+import { computeNextLevelPreview, hasProductionSlider, computeRawProductionDelta } from '../utils/production';
+
+// Ressource produite par chaque producteur (pour n'afficher que celle-ci dans l'apercu)
+const PRODUCED_RESOURCE: Partial<Record<string, 'metal' | 'crystal' | 'deuterium'>> = {
+  metalMine: 'metal',
+  crystalMine: 'crystal',
+  deuteriumSynthesizer: 'deuterium',
+};
 
 function BuildingCard({ data }: { data: BuildingData }) {
   const planet = useGameStore((s) => s.currentPlanet)();
@@ -22,9 +29,10 @@ function BuildingCard({ data }: { data: BuildingData }) {
 
   if (!planet) return null;
 
-  const isProducer = isProducerBuilding(data.id);
+  const showSlider = hasProductionSlider(data.id);
   const factor = (planet.productionFactors?.[data.id] ?? 1);
-  const preview = planet.buildings[data.id] >= 0 ? computeNextLevelPreview(planet, data.id) : null;
+  const preview = computeNextLevelPreview(planet, data.id);
+  const producedResource = PRODUCED_RESOURCE[data.id];
 
   const currentLevel = planet.buildings[data.id];
   const nextLevel = currentLevel + 1;
@@ -74,35 +82,32 @@ function BuildingCard({ data }: { data: BuildingData }) {
         <span className="build-time">{formatTime(time)}</span>
       </div>
 
-      {/* Apercu prochain niveau (energie + production pour producteurs) */}
-      {preview && (preview.deltaEnergyProduction !== 0 || preview.deltaEnergyConsumption !== 0 || preview.deltaMetal !== 0 || preview.deltaCrystal !== 0 || preview.deltaDeuterium !== 0) && (
-        <div className="building-preview">
-          <span className="preview-label">Niv. {nextLevel} :</span>
-          {preview.deltaMetal !== 0 && (
-            <span className="preview-delta">
-              <img src="/assets/fer.png" alt="" className="cost-icon" /> {preview.deltaMetal > 0 ? '+' : ''}{formatNumber(preview.deltaMetal)}/h
-            </span>
-          )}
-          {preview.deltaCrystal !== 0 && (
-            <span className="preview-delta">
-              <img src="/assets/cristal.png" alt="" className="cost-icon" /> {preview.deltaCrystal > 0 ? '+' : ''}{formatNumber(preview.deltaCrystal)}/h
-            </span>
-          )}
-          {preview.deltaDeuterium !== 0 && (
-            <span className="preview-delta">
-              <img src="/assets/deuterium.png" alt="" className="cost-icon" /> {preview.deltaDeuterium > 0 ? '+' : ''}{formatNumber(preview.deltaDeuterium)}/h
-            </span>
-          )}
-          {preview.deltaEnergyBalance !== 0 && (
-            <span className={`preview-delta ${preview.deltaEnergyBalance < 0 ? 'negative' : 'positive'}`}>
-              ⚡ {preview.deltaEnergyBalance > 0 ? '+' : ''}{formatNumber(preview.deltaEnergyBalance)}
-            </span>
-          )}
-        </div>
-      )}
+      {/* Apercu prochain niveau : production du batiment + delta energie */}
+      {(() => {
+        // Production propre (sans efficacite, sans multiplicateur) pour n'afficher que ce que le batiment apporte reellement
+        const rawDelta = producedResource ? computeRawProductionDelta(data.id, planet) : 0;
+        const energyDelta = preview.deltaEnergyBalance;
+        if (rawDelta === 0 && energyDelta === 0) return null;
+        const resIcon = producedResource === 'metal' ? '/assets/fer.png' : producedResource === 'crystal' ? '/assets/cristal.png' : producedResource === 'deuterium' ? '/assets/deuterium.png' : null;
+        return (
+          <div className="building-preview">
+            <span className="preview-label">Niv. {nextLevel} :</span>
+            {resIcon && rawDelta !== 0 && (
+              <span className="preview-delta positive">
+                <img src={resIcon} alt="" className="cost-icon" /> {rawDelta > 0 ? '+' : ''}{formatNumber(rawDelta)}/h
+              </span>
+            )}
+            {energyDelta !== 0 && (
+              <span className={`preview-delta ${energyDelta < 0 ? 'negative' : 'positive'}`}>
+                ⚡ {energyDelta > 0 ? '+' : ''}{formatNumber(energyDelta)}
+              </span>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Slider production 0-100% pour les producteurs */}
-      {isProducer && (
+      {showSlider && (
         <div className="production-slider">
           <div className="slider-header">
             <span className="slider-label">Production</span>
