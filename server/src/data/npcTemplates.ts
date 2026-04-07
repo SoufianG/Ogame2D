@@ -105,28 +105,14 @@ const NPC_NAMES = [
 export function isNpcSlot(galaxy: number, system: number, position: number): boolean {
   const seed = galaxy * 10000 + system;
   const rand = seededRandom(seed);
-
-  // Rejouer le RNG pour chaque position jusqu'a la notre
-  // La boucle dans universe.ts consomme le RNG dans un ordre precis
-  // On doit reproduire exactement cet ordre
-  const starRand = rand(); // consomme pour le starType
+  rand(); // starType
 
   for (let pos = 1; pos <= POSITION_COUNT; pos++) {
     const hasPlanet = rand() > 0.25;
     if (hasPlanet) {
       const isNpc = rand() > 0.7;
-      const _nameIdx = rand(); // consomme pour nameIdx
-      // randomSize() utilise Math.random(), pas le seeded random — pas de consommation
-      // aquaticity consomme le rand
-      const _aqua = rand();
-      const _moon = rand();
-      const _debris = rand();
-      if (rand() <= 0.1) {
-        // debris values
-        rand(); // metal
-        rand(); // crystal
-      }
-
+      rand(); // nameIdx
+      rand(); // aquaticity
       if (pos === position) return isNpc;
     } else {
       if (pos === position) return false;
@@ -167,10 +153,7 @@ export function getNpcName(galaxy: number, system: number, position: number): st
     if (hasPlanet) {
       const isNpc = rand() > 0.7;
       const nameIdx = Math.floor(rand() * NPC_NAMES.length);
-      const _aqua = rand();
-      const _moon = rand();
-      const _debris = rand();
-      if (rand() <= 0.1) { rand(); rand(); }
+      rand(); // aquaticity
 
       if (pos === position && isNpc) {
         return `${NPC_NAMES[nameIdx]} ${system}-${pos}`;

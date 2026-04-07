@@ -20,6 +20,11 @@ interface ServerGalaxyPlanet {
   npc_level: number | null;
 }
 
+interface ServerGalaxyResponse {
+  planets: ServerGalaxyPlanet[];
+  debris: { position: number; metal: number; crystal: number }[];
+}
+
 export function Galaxy() {
   const planet = useGameStore((s) => s.currentPlanet)();
   const [currentSystem, setCurrentSystem] = useState(1);
@@ -38,7 +43,16 @@ export function Galaxy() {
 
     // Charger les planetes reelles depuis le serveur
     try {
-      const serverPlanets = await apiGet<ServerGalaxyPlanet[]>(`/game/galaxy/${galaxy}/${sys}`);
+      const response = await apiGet<ServerGalaxyResponse>(`/game/galaxy/${galaxy}/${sys}`);
+      const serverPlanets = response.planets;
+
+      // Injecter les debris reels du serveur
+      for (const d of response.debris) {
+        const slot = baseSystem.slots.find((s) => s.position === d.position);
+        if (slot) {
+          slot.debris = { metal: d.metal, crystal: d.crystal };
+        }
+      }
 
       // Injecter les vrais joueurs par-dessus la generation
       for (const sp of serverPlanets) {

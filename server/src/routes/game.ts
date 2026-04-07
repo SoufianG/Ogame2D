@@ -721,6 +721,11 @@ router.get('/galaxy/:galaxy/:system', (req: AuthRequest, res) => {
   // Generation paresseuse des PNJ pour ce systeme
   ensureNpcSystem(db, galaxyNum, systemNum);
 
+  // Champs de debris du systeme
+  const debrisRows = db.prepare(
+    'SELECT position, metal, crystal FROM debris_fields WHERE galaxy = ? AND system = ?',
+  ).all(galaxyNum, systemNum) as { position: number; metal: number; crystal: number }[];
+
   const INACTIVE_DAYS = 7;
   const VACATION_DAYS = 3;
 
@@ -743,7 +748,7 @@ router.get('/galaxy/:galaxy/:system', (req: AuthRequest, res) => {
     ORDER BY p.position
   `).all(galaxyNum, systemNum);
 
-  res.json(planets);
+  res.json({ planets, debris: debrisRows });
 });
 
 export default router;

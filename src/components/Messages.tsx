@@ -163,8 +163,8 @@ function EspionageReport({ msg }: { msg: GameMessage }) {
 
 // ---- Formulaire d'envoi ----
 
-function ComposeForm() {
-  const [form, setForm] = useState({ toUsername: '', subject: '', body: '' });
+function ComposeForm({ initialTo }: { initialTo?: string }) {
+  const [form, setForm] = useState({ toUsername: initialTo ?? '', subject: '', body: '' });
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -233,8 +233,19 @@ export function Messages() {
   const systemMessages = useGameStore((s) => s.messages);
   const markMessageRead = useGameStore((s) => s.markMessageRead);
   const deleteMessage = useGameStore((s) => s.deleteMessage);
+  const pendingMessageTo = useGameStore((s) => s.pendingMessageTo);
+  const setPendingMessageTo = useGameStore((s) => s.setPendingMessageTo);
 
   const [tab, setTab] = useState<TabFilter>('all');
+  const [initialTo, setInitialTo] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    if (pendingMessageTo) {
+      setInitialTo(pendingMessageTo.username);
+      setTab('write');
+      setPendingMessageTo(null);
+    }
+  }, [pendingMessageTo, setPendingMessageTo]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [inbox, setInbox] = useState<PrivateMessage[]>([]);
   const [sent, setSent] = useState<PrivateMessage[]>([]);
@@ -431,7 +442,7 @@ export function Messages() {
       )}
 
       {/* Ecrire un message */}
-      {tab === 'write' && <ComposeForm />}
+      {tab === 'write' && <ComposeForm initialTo={initialTo} />}
     </div>
   );
 }

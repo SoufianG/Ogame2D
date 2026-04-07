@@ -72,6 +72,17 @@ interface GameState {
   fleetMovements: FleetMovement[];
   messages: GameMessage[];
 
+  // Cible de flotte preremplie (depuis la galaxie)
+  pendingFleetTarget: {
+    destination: { galaxy: number; system: number; position: number };
+    mission: MissionType;
+  } | null;
+  setPendingFleetTarget: (target: GameState['pendingFleetTarget']) => void;
+
+  // Destinataire de message preremplie
+  pendingMessageTo: { username: string; userId: string } | null;
+  setPendingMessageTo: (target: GameState['pendingMessageTo']) => void;
+
   // Getters
   currentPlanet: () => Planet | undefined;
 
@@ -138,6 +149,10 @@ export const useGameStore = create<GameState>()(
       shipyardQueues: {},
       fleetMovements: [],
       messages: [],
+      pendingFleetTarget: null,
+      pendingMessageTo: null,
+      setPendingFleetTarget: (target) => set({ pendingFleetTarget: target }),
+      setPendingMessageTo: (target) => set({ pendingMessageTo: target }),
 
       currentPlanet: () => {
         const { planets, currentPlanetId } = get();

@@ -1,5 +1,18 @@
 const CHANGELOG = [
   {
+    version: '0.11.1',
+    date: '2026-04-07',
+    title: 'Infobulles galaxie interactives',
+    entries: [
+      { type: 'new' as const, text: 'Boutons fonctionnels dans le tooltip galaxie : Attaquer, Espionner, Transport, Recycler, Coloniser, Message' },
+      { type: 'new' as const, text: 'Clic sur une action pre-remplit la page Flotte (destination + mission) ou Messages (destinataire)' },
+      { type: 'improve' as const, text: 'Bouton "Recycler" affiche uniquement si la planete a un champ de debris' },
+      { type: 'improve' as const, text: 'Bouton "Message" affiche uniquement pour les vrais joueurs (pas les PNJ)' },
+      { type: 'fix' as const, text: 'Suppression de la generation aleatoire client de lunes et champs de debris — ils se forment desormais naturellement par combat' },
+      { type: 'fix' as const, text: 'Les vrais champs de debris du serveur sont maintenant affiches dans la vue galaxie' },
+    ],
+  },
+  {
     version: '0.11.0',
     date: '2026-04-07',
     title: 'PNJ raidables persistants',

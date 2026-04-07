@@ -92,10 +92,8 @@ export function generateSystem(galaxy: number, system: number): SolarSystem {
           playerId: isNpc ? `npc-${seed}-${pos}` : null,
           playerName: isNpc ? `Empire ${nameIdx + 1}` : null,
         },
-        moon: rand() > 0.85, // 15% de chance d'avoir une lune
-        debris: rand() > 0.9 // 10% de chance d'avoir un champ de debris
-          ? { metal: Math.floor(rand() * 50000), crystal: Math.floor(rand() * 30000) }
-          : null,
+        moon: false, // les lunes sont creees naturellement par combat (cote serveur)
+        debris: null, // les champs de debris sont crees naturellement par combat
       });
     } else {
       slots.push({

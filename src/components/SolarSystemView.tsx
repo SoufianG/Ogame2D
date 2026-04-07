@@ -1,6 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import type { Biome } from '../types';
 import type { SolarSystem, SystemSlot } from '../data/universe';
+import { useGameStore } from '../store/gameStore';
+import type { MissionType } from '../types/fleet';
 
 // === COULEURS ===
 const STAR_COLORS: Record<string, { fill: string; glow: string }> = {
@@ -52,6 +55,23 @@ export function SolarSystemView({ system, onSlotClick }: Props) {
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
   const [paused, setPaused] = useState(prefersReducedMotion);
   const animRef = useRef<number>(0);
+  const navigate = useNavigate();
+  const setPendingFleetTarget = useGameStore((s) => s.setPendingFleetTarget);
+  const setPendingMessageTo = useGameStore((s) => s.setPendingMessageTo);
+
+  const launchFleet = (slot: SystemSlot, mission: MissionType) => {
+    setPendingFleetTarget({
+      destination: { galaxy: system.galaxy, system: system.system, position: slot.position },
+      mission,
+    });
+    navigate('/fleet');
+  };
+
+  const sendMessage = (slot: SystemSlot) => {
+    if (!slot.planet?.playerId || !slot.planet.playerName) return;
+    setPendingMessageTo({ userId: slot.planet.playerId, username: slot.planet.playerName });
+    navigate('/messages');
+  };
 
   useEffect(() => {
     if (paused) {
@@ -336,14 +356,26 @@ export function SolarSystemView({ system, onSlotClick }: Props) {
             </div>
             <div className="tooltip-actions">
               {planet.playerId === 'player' ? (
-                <button className="tooltip-btn">Voir la planete</button>
+                <button className="tooltip-btn" onClick={() => navigate('/')}>Voir la planete</button>
               ) : planet.playerId ? (
                 <>
-                  <button className="tooltip-btn">Espionner</button>
-                  <button className="tooltip-btn attack">Attaquer</button>
+                  <button className="tooltip-btn" onClick={() => launchFleet(slot, 'espionage')}>Espionner</button>
+                  <button className="tooltip-btn attack" onClick={() => launchFleet(slot, 'attack')}>Attaquer</button>
+                  <button className="tooltip-btn" onClick={() => launchFleet(slot, 'transport')}>Transport</button>
+                  {slot.debris && (
+                    <button className="tooltip-btn" onClick={() => launchFleet(slot, 'recycle')}>Recycler</button>
+                  )}
+                  {!planet.isNpc && (
+                    <button className="tooltip-btn" onClick={() => sendMessage(slot)}>Message</button>
+                  )}
                 </>
               ) : (
-                <button className="tooltip-btn">Coloniser</button>
+                <>
+                  <button className="tooltip-btn" onClick={() => launchFleet(slot, 'colonize')}>Coloniser</button>
+                  {slot.debris && (
+                    <button className="tooltip-btn" onClick={() => launchFleet(slot, 'recycle')}>Recycler</button>
+                  )}
+                </>
               )}
             </div>
           </div>

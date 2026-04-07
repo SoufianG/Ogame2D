@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useGameStore } from '../store/gameStore';
 import { SHIPS_DATA } from '../data/ships';
 import type { ShipType, MissionType } from '../types/fleet';
@@ -22,6 +22,8 @@ export function Fleet() {
   const planet = useGameStore((s) => s.currentPlanet)();
   const fleetMovements = useGameStore((s) => s.fleetMovements);
   const sendFleet = useGameStore((s) => s.sendFleet);
+  const pendingFleetTarget = useGameStore((s) => s.pendingFleetTarget);
+  const setPendingFleetTarget = useGameStore((s) => s.setPendingFleetTarget);
 
   const [step, setStep] = useState<FleetStep>('select');
   const [selected, setSelected] = useState<Partial<Record<ShipType, number>>>({});
@@ -30,6 +32,16 @@ export function Fleet() {
   const [speed, setSpeed] = useState(100);
   const [cargo, setCargo] = useState({ metal: 0, crystal: 0, deuterium: 0 });
   const [sending, setSending] = useState(false);
+
+  // Pre-remplir depuis la galaxie si une cible a ete definie
+  useEffect(() => {
+    if (pendingFleetTarget) {
+      setDestination(pendingFleetTarget.destination);
+      setMission(pendingFleetTarget.mission);
+      setStep('select');
+      setPendingFleetTarget(null);
+    }
+  }, [pendingFleetTarget, setPendingFleetTarget]);
 
   if (!planet) return <div>Aucune planete selectionnee</div>;
 
