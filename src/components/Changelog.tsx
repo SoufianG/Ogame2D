@@ -10,6 +10,7 @@ const CHANGELOG = [
       { type: 'new' as const, text: 'Ressources des PNJ regenerent en 24h apres pillage, defenses reset apres 48h si totalement detruites' },
       { type: 'new' as const, text: 'Indicateur de difficulte en couleur (vert/jaune/rouge) sur les PNJ dans la galaxie' },
       { type: 'improve' as const, text: 'Affichage du niveau PNJ dans le tooltip de la vue galaxie' },
+      { type: 'fix' as const, text: 'Les ressources se rafraichissent immediatement apres reclamation d\'un succes (plus besoin de recharger)' },
     ],
   },
   {
