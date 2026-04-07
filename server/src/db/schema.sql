@@ -29,6 +29,9 @@ CREATE TABLE IF NOT EXISTS planets (
   buildings TEXT NOT NULL DEFAULT '{}',  -- JSON
   ships TEXT NOT NULL DEFAULT '{}',      -- JSON
   defenses TEXT NOT NULL DEFAULT '{}',   -- JSON
+  is_npc INTEGER NOT NULL DEFAULT 0,
+  npc_level INTEGER DEFAULT NULL,
+  last_pillaged INTEGER DEFAULT NULL,
   created_at INTEGER NOT NULL DEFAULT (unixepoch()),
   UNIQUE(galaxy, system, position)
 );

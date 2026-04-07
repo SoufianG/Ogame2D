@@ -2,6 +2,8 @@ import { getDb } from '../db/database.js';
 import { computeProduction, computeStorage, type Buildings } from './production.js';
 import { simulateCombat } from './combat.js';
 import { checkAchievements } from '../routes/achievements.js';
+import { ensureNpcPlanet, regenerateNpcPlanet } from './npcPlanets.js';
+import { getNpcTemplate } from '../data/npcTemplates.js';
 
 const TICK_INTERVAL = 5000; // 5 secondes
 const ACHIEVEMENT_CHECK_INTERVAL = 30000; // 30 secondes
@@ -252,7 +254,7 @@ export function catchUp(userId: string) {
 
 // === Production ===
 function tickProduction(db: ReturnType<typeof getDb>, deltaSeconds: number) {
-  const planets = db.prepare('SELECT * FROM planets').all() as PlanetRow[];
+  const planets = db.prepare('SELECT * FROM planets WHERE is_npc = 0').all() as PlanetRow[];
   const hoursElapsed = deltaSeconds / 3600;
 
   const updateStmt = db.prepare('UPDATE planets SET metal = ?, crystal = ?, deuterium = ? WHERE id = ?');
@@ -389,15 +391,18 @@ function tickFleets(db: ReturnType<typeof getDb>, nowUnix: number) {
   }
 }
 
-function getTargetPlanet(db: ReturnType<typeof getDb>, fleet: FleetRow) {
+interface TargetPlanet {
+  id: string; user_id: string; name: string;
+  metal: number; crystal: number; deuterium: number;
+  buildings: string; ships: string; defenses: string; temperature: number;
+  galaxy: number; system: number; position: number;
+  is_npc: number; npc_level: number | null; last_pillaged: number | null;
+}
+
+function getTargetPlanet(db: ReturnType<typeof getDb>, fleet: FleetRow): TargetPlanet | undefined {
   return db.prepare(
     'SELECT * FROM planets WHERE galaxy = ? AND system = ? AND position = ?',
-  ).get(fleet.dest_galaxy, fleet.dest_system, fleet.dest_position) as {
-    id: string; user_id: string; name: string;
-    metal: number; crystal: number; deuterium: number;
-    buildings: string; ships: string; defenses: string; temperature: number;
-    galaxy: number; system: number; position: number;
-  } | undefined;
+  ).get(fleet.dest_galaxy, fleet.dest_system, fleet.dest_position) as TargetPlanet | undefined;
 }
 
 function getResearchData(db: ReturnType<typeof getDb>, userId: string): Record<string, number> {
@@ -430,7 +435,15 @@ function resolveFleetArrival(db: ReturnType<typeof getDb>, fleet: FleetRow, nowU
 
 // === ATTAQUE ===
 function resolveAttack(db: ReturnType<typeof getDb>, fleet: FleetRow, ships: Record<string, number>, nowUnix: number) {
-  const target = getTargetPlanet(db, fleet);
+  // Generation paresseuse PNJ
+  ensureNpcPlanet(db, fleet.dest_galaxy, fleet.dest_system, fleet.dest_position);
+
+  let target = getTargetPlanet(db, fleet);
+
+  // Regeneration des ressources/defenses si PNJ
+  if (target && target.is_npc) {
+    target = regenerateNpcPlanet(db, target as never, nowUnix) as TargetPlanet;
+  }
 
   if (!target) {
     // Pas de planete a cette position — retour a vide
@@ -443,9 +456,22 @@ function resolveAttack(db: ReturnType<typeof getDb>, fleet: FleetRow, ships: Rec
   }
 
   const attackerResearch = getResearchData(db, fleet.user_id);
-  const defenderResearch = getResearchData(db, target.user_id);
   const targetShips = JSON.parse(target.ships) as Record<string, number>;
   const targetDefenses = JSON.parse(target.defenses) as Record<string, number>;
+
+  // Pour les PNJ, tech depuis le template ; sinon depuis la table research
+  let defenderWeapon = 0, defenderShield = 0, defenderArmour = 0;
+  if (target.is_npc && target.npc_level !== null) {
+    const tpl = getNpcTemplate(target.npc_level);
+    defenderWeapon = tpl.tech.weaponsTech;
+    defenderShield = tpl.tech.shieldingTech;
+    defenderArmour = tpl.tech.armourTech;
+  } else {
+    const defenderResearch = getResearchData(db, target.user_id);
+    defenderWeapon = defenderResearch.weaponsTech || 0;
+    defenderShield = defenderResearch.shieldingTech || 0;
+    defenderArmour = defenderResearch.armourTech || 0;
+  }
 
   const result = simulateCombat({
     attacker: {
@@ -457,9 +483,9 @@ function resolveAttack(db: ReturnType<typeof getDb>, fleet: FleetRow, ships: Rec
     defender: {
       ships: targetShips,
       defenses: targetDefenses,
-      weaponTech: defenderResearch.weaponsTech || 0,
-      shieldTech: defenderResearch.shieldingTech || 0,
-      armourTech: defenderResearch.armourTech || 0,
+      weaponTech: defenderWeapon,
+      shieldTech: defenderShield,
+      armourTech: defenderArmour,
       resources: { metal: target.metal, crystal: target.crystal, deuterium: target.deuterium },
     },
   });
@@ -470,12 +496,14 @@ function resolveAttack(db: ReturnType<typeof getDb>, fleet: FleetRow, ships: Rec
   );
 
   // Mettre a jour la planete cible (vaisseaux survivants, defenses survivantes, ressources pillees)
-  // Les defenses sont reconstruites a 70% apres le combat (regle OGame)
+  // Pour les joueurs : defenses reconstruites a 70% (regle OGame)
+  // Pour les PNJ : pas de reconstruction (regen 48h via regenerateNpcPlanet)
   const newDefenses: Record<string, number> = {};
+  const rebuildRatio = target.is_npc ? 0 : 0.7;
   for (const [type, count] of Object.entries(targetDefenses)) {
     const lost = result.defenderLosses[type] || 0;
     const survived = count - lost;
-    const rebuilt = Math.floor(lost * 0.7);
+    const rebuilt = Math.floor(lost * rebuildRatio);
     newDefenses[type] = survived + rebuilt;
     if (newDefenses[type] <= 0) delete newDefenses[type];
   }
@@ -492,6 +520,11 @@ function resolveAttack(db: ReturnType<typeof getDb>, fleet: FleetRow, ships: Rec
     result.loot.metal, result.loot.crystal, result.loot.deuterium,
     target.id,
   );
+
+  // Marquer last_pillaged pour PNJ (pour la regeneration)
+  if (target.is_npc && result.winner === 'attacker') {
+    db.prepare('UPDATE planets SET last_pillaged = ? WHERE id = ?').run(nowUnix, target.id);
+  }
 
   // Debris
   if (result.debris.metal > 0 || result.debris.crystal > 0) {
@@ -530,8 +563,8 @@ function resolveAttack(db: ReturnType<typeof getDb>, fleet: FleetRow, ships: Rec
     combatData, nowUnix,
   );
 
-  // Message defenseur
-  if (target.user_id !== fleet.user_id) {
+  // Message defenseur (pas pour les PNJ)
+  if (target.user_id !== fleet.user_id && target.user_id !== 'npc') {
     const attackerName = db.prepare('SELECT username FROM users WHERE id = ?').get(fleet.user_id) as { username: string } | undefined;
     db.prepare('INSERT INTO messages (id, user_id, type, title, body, data, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)').run(
       msgId(nowUnix), target.user_id, 'combat',
@@ -544,7 +577,11 @@ function resolveAttack(db: ReturnType<typeof getDb>, fleet: FleetRow, ships: Rec
 
 // === ESPIONNAGE ===
 function resolveEspionage(db: ReturnType<typeof getDb>, fleet: FleetRow, ships: Record<string, number>, nowUnix: number) {
-  const target = getTargetPlanet(db, fleet);
+  ensureNpcPlanet(db, fleet.dest_galaxy, fleet.dest_system, fleet.dest_position);
+  let target = getTargetPlanet(db, fleet);
+  if (target && target.is_npc) {
+    target = regenerateNpcPlanet(db, target as never, nowUnix) as TargetPlanet;
+  }
   db.prepare('UPDATE fleet_movements SET resolved = 1 WHERE id = ?').run(fleet.id);
 
   if (!target) {
@@ -556,10 +593,11 @@ function resolveEspionage(db: ReturnType<typeof getDb>, fleet: FleetRow, ships: 
   }
 
   const attackerResearch = getResearchData(db, fleet.user_id);
-  const defenderResearch = getResearchData(db, target.user_id);
+  const defenderResearch = target.is_npc ? {} : getResearchData(db, target.user_id);
 
   const spyLevel = attackerResearch.espionageTech || 0;
-  const counterSpy = defenderResearch.espionageTech || 0;
+  // PNJ : pas de contre-espionnage
+  const counterSpy = target.is_npc ? 0 : (defenderResearch.espionageTech || 0);
   const probeCount = ships.espionageProbe || 1;
 
   // Visibilite progressive : base = spyLevel * probeCount^0.5 - counterSpy
@@ -611,8 +649,8 @@ function resolveEspionage(db: ReturnType<typeof getDb>, fleet: FleetRow, ships: 
     JSON.stringify({ espionageReport: report }), nowUnix,
   );
 
-  // Message defenseur (alerte d'espionnage)
-  if (target.user_id !== fleet.user_id) {
+  // Message defenseur (alerte d'espionnage) — pas pour les PNJ
+  if (target.user_id !== fleet.user_id && target.user_id !== 'npc') {
     const attackerName = db.prepare('SELECT username FROM users WHERE id = ?').get(fleet.user_id) as { username: string } | undefined;
     db.prepare('INSERT INTO messages (id, user_id, type, title, body, created_at) VALUES (?, ?, ?, ?, ?, ?)').run(
       msgId(nowUnix), target.user_id, 'espionage',
@@ -624,6 +662,9 @@ function resolveEspionage(db: ReturnType<typeof getDb>, fleet: FleetRow, ships: 
 
 // === COLONISATION ===
 function resolveColonize(db: ReturnType<typeof getDb>, fleet: FleetRow, ships: Record<string, number>, nowUnix: number) {
+  // Generation paresseuse PNJ pour bloquer la colonisation sur slot PNJ
+  ensureNpcPlanet(db, fleet.dest_galaxy, fleet.dest_system, fleet.dest_position);
+
   // Verifier qu'il n'y a pas deja une planete a cette position
   const existing = db.prepare('SELECT id FROM planets WHERE galaxy = ? AND system = ? AND position = ?').get(
     fleet.dest_galaxy, fleet.dest_system, fleet.dest_position,

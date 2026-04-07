@@ -221,14 +221,20 @@ export function SolarSystemView({ system, onSlotClick }: Props) {
                   </g>
                 )}
 
-                {/* Indicateur NPC */}
+                {/* Indicateur joueur/PNJ */}
                 {slot.planet!.playerId && slot.planet!.playerId !== 'player' && (
                   <circle
                     cx={pos.x}
                     cy={pos.y - r - 5}
                     r={2}
-                    fill="#f87171"
-                    opacity={0.8}
+                    fill={
+                      slot.planet!.isNpc
+                        ? (slot.planet!.npcLevel ?? 0) <= 3 ? '#4ade80'
+                          : (slot.planet!.npcLevel ?? 0) <= 6 ? '#fbbf24'
+                          : '#f87171'
+                        : '#a78bfa'
+                    }
+                    opacity={0.85}
                   />
                 )}
               </g>
@@ -313,8 +319,8 @@ export function SolarSystemView({ system, onSlotClick }: Props) {
             <div className="tooltip-header">
               <span className="tooltip-name">{planet.name}</span>
               {planet.playerName && (
-                <span className={`tooltip-owner ${planet.playerId === 'player' ? 'self' : 'enemy'}`}>
-                  {planet.playerName}
+                <span className={`tooltip-owner ${planet.playerId === 'player' ? 'self' : planet.isNpc ? 'npc' : 'enemy'}`}>
+                  {planet.isNpc ? `PNJ Niv.${planet.npcLevel}` : planet.playerName}
                 </span>
               )}
             </div>

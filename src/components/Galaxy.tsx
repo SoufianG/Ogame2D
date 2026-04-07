@@ -15,7 +15,9 @@ interface ServerGalaxyPlanet {
   player_name: string;
   user_id: string;
   has_moon: number | null;
-  status: string; // 'active' | 'inactive' | 'vacation'
+  status: string; // 'active' | 'inactive' | 'vacation' | 'npc'
+  is_npc: number;
+  npc_level: number | null;
 }
 
 export function Galaxy() {
@@ -58,6 +60,8 @@ export function Galaxy() {
             aquaticity: 0.3,
             playerId: isMe ? 'player' : sp.user_id,
             playerName: isMe ? 'Vous' : sp.player_name,
+            isNpc: !!sp.is_npc,
+            npcLevel: sp.npc_level,
           };
           slot.moon = !!sp.has_moon;
         }

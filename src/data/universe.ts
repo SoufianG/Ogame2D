@@ -32,6 +32,8 @@ export interface SlotPlanet {
   aquaticity: number;
   playerId: string | null; // null = planete libre/NPC
   playerName: string | null;
+  isNpc?: boolean;
+  npcLevel?: number | null;
 }
 
 export interface SolarSystem {

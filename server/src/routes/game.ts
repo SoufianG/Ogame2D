@@ -5,6 +5,7 @@ import { computeProduction, computeStorage, getBuildingCost, getBuildingTime, ge
 import { BUILDINGS } from '../data/buildings.js';
 import { RESEARCH } from '../data/research.js';
 import { ALL_UNITS, getUnitTime } from '../data/ships.js';
+import { ensureNpcSystem } from '../engine/npcPlanets.js';
 
 const router = Router();
 router.use(authMiddleware);
@@ -714,26 +715,33 @@ router.post('/fleet/send', (req: AuthRequest, res) => {
 router.get('/galaxy/:galaxy/:system', (req: AuthRequest, res) => {
   const db = getDb();
   const { galaxy, system } = req.params;
+  const galaxyNum = parseInt(galaxy as string);
+  const systemNum = parseInt(system as string);
+
+  // Generation paresseuse des PNJ pour ce systeme
+  ensureNpcSystem(db, galaxyNum, systemNum);
 
   const INACTIVE_DAYS = 7;
   const VACATION_DAYS = 3;
 
   const planets = db.prepare(`
     SELECT p.position, p.name, p.size, p.temperature, p.biome,
-           u.username as player_name, p.user_id,
+           CASE WHEN p.is_npc = 1 THEN p.name ELSE u.username END as player_name,
+           p.user_id, p.is_npc, p.npc_level,
            u.last_login,
            (SELECT 1 FROM moons WHERE planet_id = p.id) as has_moon,
            CASE
+             WHEN p.is_npc = 1 THEN 'npc'
              WHEN u.last_login IS NULL THEN 'inactive'
              WHEN (unixepoch() - u.last_login) > ${INACTIVE_DAYS * 86400} THEN 'inactive'
              WHEN (unixepoch() - u.last_login) > ${VACATION_DAYS * 86400} THEN 'vacation'
              ELSE 'active'
            END as status
     FROM planets p
-    JOIN users u ON u.id = p.user_id
+    LEFT JOIN users u ON u.id = p.user_id
     WHERE p.galaxy = ? AND p.system = ?
     ORDER BY p.position
-  `).all(parseInt(galaxy as string), parseInt(system as string));
+  `).all(galaxyNum, systemNum);
 
   res.json(planets);
 });

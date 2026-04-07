@@ -1,5 +1,18 @@
 const CHANGELOG = [
   {
+    version: '0.11.0',
+    date: '2026-04-07',
+    title: 'PNJ raidables persistants',
+    entries: [
+      { type: 'new' as const, text: 'Les PNJ sont desormais raidables : 10 niveaux de difficulte avec ressources, defenses et flottes predefinies' },
+      { type: 'new' as const, text: 'Espionnage et combat coherents sur les PNJ — le rapport reflete ce que vous affronterez' },
+      { type: 'new' as const, text: 'Difficulte progressive par zone : systemes 1-10 → niv 1-4, systemes 41-50 → niv 7-10' },
+      { type: 'new' as const, text: 'Ressources des PNJ regenerent en 24h apres pillage, defenses reset apres 48h si totalement detruites' },
+      { type: 'new' as const, text: 'Indicateur de difficulte en couleur (vert/jaune/rouge) sur les PNJ dans la galaxie' },
+      { type: 'improve' as const, text: 'Affichage du niveau PNJ dans le tooltip de la vue galaxie' },
+    ],
+  },
+  {
     version: '0.10.1',
     date: '2026-04-06',
     title: 'Capacite de stockage visible',
